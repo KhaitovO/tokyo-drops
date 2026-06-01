@@ -156,7 +156,6 @@ export default function Home() {
                   <div style={{textAlign:'center',padding:'80px 24px',color:'#bbb'}}>
                     <p style={{fontSize:'48px',marginBottom:'16px'}}>🇯🇵</p>
                     <p style={{fontSize:'16px',marginBottom:'8px',color:'#888'}}>Mahsulotlar tez orada qo'shiladi</p>
-                    <p style={{fontSize:'13px'}}>Admin paneldan mahsulot qo'shing</p>
                   </div>
                 )}
                 <div className="cta-banner">
@@ -305,44 +304,120 @@ export default function Home() {
         </div>
       </div>
 
+      {/* DETAIL MODAL WITH SLIDER */}
       <div className={`modal-bg${detail ? ' show' : ''}`} onClick={() => setDetailId(null)}>
-        {detail && (
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <img className="modal-img" src={detail.img || 'https://images.unsplash.com/photo-1523381294911-8d3cead13475?w=600'} alt={detail.name}/>
-            <div className="modal-body">
-              <button className="close-btn" style={{display:'block',marginLeft:'auto',marginBottom:'12px'}} onClick={() => setDetailId(null)}>×</button>
-              <div className="modal-cat">{detail.cat}</div>
-              <div className="modal-name serif">{detail.name}</div>
-              <div className="modal-prices">
-                <span className="modal-price">{fmt(detail.price)}</span>
-                {detail.old_price && <span className="modal-old">{fmt(detail.old_price)}</span>}
-              </div>
-              {detail.sizes?.length > 0 && (
-                <>
-                  <div className="sizes-lbl">O'lchamlar</div>
-                  <div className="sizes-row">{detail.sizes.map(s => <button key={s} className="size-btn">{s}</button>)}</div>
-                </>
-              )}
-              {detail.description && <div className="modal-desc">{detail.description}</div>}
-              <button className="btn-dark" style={{width:'100%',padding:'14px',fontSize:'11px',letterSpacing:'.1em'}}
-                onClick={() => { addToCart(detail.id); setDetailId(null) }}>
-                SAVATGA QO'SHISH
-              </button>
-              <div className="modal-stock">Zaxirada: {detail.stock} ta</div>
-            </div>
-          </div>
-        )}
+        {detail && <DetailModal detail={detail} onClose={() => setDetailId(null)} onAdd={addToCart} />}
       </div>
     </>
   )
 }
 
+function DetailModal({ detail, onClose, onAdd }) {
+  const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
+  const images = detail.images?.length > 0 ? detail.images : (detail.img ? [detail.img] : [])
+  const [activeImg, setActiveImg] = useState(0)
+  const [selectedSize, setSelectedSize] = useState(null)
+
+  function prev() { setActiveImg(i => (i - 1 + images.length) % images.length) }
+  function next() { setActiveImg(i => (i + 1) % images.length) }
+
+  return (
+    <div className="modal" onClick={e => e.stopPropagation()}>
+      {/* IMAGE SLIDER */}
+      <div style={{position:'relative',background:'#f5f5f3',overflow:'hidden'}}>
+        <img
+          src={images[activeImg]}
+          alt={detail.name}
+          style={{width:'100%',height:'100%',maxHeight:'80vh',objectFit:'cover',display:'block'}}
+        />
+        {images.length > 1 && (
+          <>
+            <button onClick={prev} style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',background:'rgba(255,255,255,.9)',border:'none',width:36,height:36,fontSize:'18px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
+            <button onClick={next} style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'rgba(255,255,255,.9)',border:'none',width:36,height:36,fontSize:'18px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>
+            {/* Dots */}
+            <div style={{position:'absolute',bottom:12,left:'50%',transform:'translateX(-50%)',display:'flex',gap:'6px'}}>
+              {images.map((_, i) => (
+                <button key={i} onClick={()=>setActiveImg(i)}
+                  style={{width:i===activeImg?20:7,height:7,borderRadius:'4px',background:i===activeImg?'#111':'rgba(0,0,0,.3)',border:'none',cursor:'pointer',transition:'all .2s',padding:0}}/>
+              ))}
+            </div>
+            {/* Thumbnails */}
+            <div style={{position:'absolute',bottom:32,left:0,right:0,display:'flex',gap:'6px',padding:'0 12px',justifyContent:'center',flexWrap:'wrap'}}>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* CONTENT */}
+      <div className="modal-body">
+        <button className="close-btn" style={{display:'block',marginLeft:'auto',marginBottom:'12px'}} onClick={onClose}>×</button>
+
+        {/* Thumbnail strip */}
+        {images.length > 1 && (
+          <div style={{display:'flex',gap:'6px',marginBottom:'16px',flexWrap:'wrap'}}>
+            {images.map((img, i) => (
+              <div key={i} onClick={()=>setActiveImg(i)}
+                style={{width:52,height:52,overflow:'hidden',cursor:'pointer',flexShrink:0,border:activeImg===i?'2px solid #111':'2px solid transparent',transition:'border-color .2s'}}>
+                <img src={img} style={{width:'100%',height:'100%',objectFit:'cover'}} alt=""/>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="modal-cat">{detail.cat}</div>
+        <div className="modal-name serif">{detail.name}</div>
+        <div className="modal-prices">
+          <span className="modal-price">{fmt(detail.price)}</span>
+          {detail.old_price && <span className="modal-old">{fmt(detail.old_price)}</span>}
+        </div>
+
+        {detail.sizes?.length > 0 && (
+          <>
+            <div className="sizes-lbl">O'lchamni tanlang</div>
+            <div className="sizes-row">
+              {detail.sizes.map(s => (
+                <button key={s} className={`size-btn${selectedSize===s?' active':''}`} onClick={()=>setSelectedSize(s)}>{s}</button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {detail.description && <div className="modal-desc">{detail.description}</div>}
+
+        <button className="btn-dark" style={{width:'100%',padding:'14px',fontSize:'11px',letterSpacing:'.1em'}}
+          onClick={() => { onAdd(detail.id); onClose() }}>
+          SAVATGA QO'SHISH
+        </button>
+        <div className="modal-stock">Zaxirada: {detail.stock} ta</div>
+      </div>
+    </div>
+  )
+}
+
 function ProductCard({ p, onAdd, onDetail }) {
   const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
+  const images = p.images?.length > 0 ? p.images : (p.img ? [p.img] : [])
+  const [imgIdx, setImgIdx] = useState(0)
+
   return (
     <div className="pcard" onClick={() => onDetail(p.id)}>
       <div className="pcard-img-wrap">
-        <img src={p.img || 'https://images.unsplash.com/photo-1523381294911-8d3cead13475?w=400'} alt={p.name} loading="lazy"/>
+        <img src={images[imgIdx] || 'https://images.unsplash.com/photo-1523381294911-8d3cead13475?w=400'} alt={p.name} loading="lazy"/>
+        {images.length > 1 && (
+          <>
+            <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i-1+images.length)%images.length)}}
+              style={{position:'absolute',left:6,top:'50%',transform:'translateY(-50%)',background:'rgba(255,255,255,.85)',border:'none',width:28,height:28,fontSize:'16px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:0}}
+              className="card-arrow card-arrow-l">‹</button>
+            <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i+1)%images.length)}}
+              style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',background:'rgba(255,255,255,.85)',border:'none',width:28,height:28,fontSize:'16px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:0}}
+              className="card-arrow card-arrow-r">›</button>
+            <div style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',display:'flex',gap:'4px'}}>
+              {images.map((_,i) => (
+                <span key={i} style={{width:i===imgIdx?14:5,height:5,borderRadius:'3px',background:i===imgIdx?'#fff':'rgba(255,255,255,.6)',display:'block',transition:'all .2s'}}/>
+              ))}
+            </div>
+          </>
+        )}
         <div className="ptags">
           {p.is_new && <span className="ptag ptag-new">Yangi</span>}
           {p.is_sale && <span className="ptag ptag-sale">Sale</span>}

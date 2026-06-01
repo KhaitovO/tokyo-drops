@@ -444,3 +444,6 @@ input, select, textarea { font-family: inherit; outline: none; }
   .footer-inner { grid-template-columns: 1fr; }
   .stats { grid-template-columns: repeat(2, 1fr); }
 }
+
+.pcard-img-wrap:hover .card-arrow { opacity: 1 !important; }
+.card-arrow { transition: opacity .2s; }
