@@ -327,10 +327,13 @@ function DetailModal({ detail, onClose, onAdd }) {
   const [zoomPos, setZoomPos] = useState({x:50,y:50})
   const [fullscreen, setFullscreen] = useState(false)
   const imgRef = useRef()
-  const swipeStart = useRef(null)
+  const fsRef = useRef()
+  const swipeRef = useRef(null)
+  const activeImgRef = useRef(activeImg)
+  activeImgRef.current = activeImg
 
-  function prev(e) { e?.stopPropagation(); setActiveImg(i => (i - 1 + images.length) % images.length) }
-  function next(e) { e?.stopPropagation(); setActiveImg(i => (i + 1) % images.length) }
+  function prev() { setActiveImg(i => (i - 1 + images.length) % images.length) }
+  function next() { setActiveImg(i => (i + 1) % images.length) }
 
   function handleMouseMove(e) {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -339,32 +342,47 @@ function DetailModal({ detail, onClose, onAdd }) {
     setZoomPos({x, y})
   }
 
-  function handleTouchStart(e) {
-    swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-  }
+  // Native touch events for fullscreen - bypasses passive listener issue
+  useEffect(() => {
+    if (!fullscreen || !fsRef.current) return
+    const el = fsRef.current
 
-  function handleTouchMove(e) {
-    if (!swipeStart.current) return
-    const diffX = Math.abs(e.touches[0].clientX - swipeStart.current.x)
-    const diffY = Math.abs(e.touches[0].clientY - swipeStart.current.y)
-    if (diffX > diffY && diffX > 10) {
+    function onTouchStart(e) {
+      swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    }
+
+    function onTouchMove(e) {
+      if (!swipeRef.current) return
+      const dx = Math.abs(e.touches[0].clientX - swipeRef.current.x)
+      const dy = Math.abs(e.touches[0].clientY - swipeRef.current.y)
+      if (dx > dy && dx > 8) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    }
+
+    function onTouchEnd(e) {
+      if (!swipeRef.current) return
+      const dx = swipeRef.current.x - e.changedTouches[0].clientX
+      const dy = Math.abs(swipeRef.current.y - e.changedTouches[0].clientY)
+      swipeRef.current = null
+      if (Math.abs(dx) < 40 || Math.abs(dx) < dy) return
       e.preventDefault()
       e.stopPropagation()
+      if (dx > 0) setActiveImg(i => (i + 1) % images.length)
+      else setActiveImg(i => (i - 1 + images.length) % images.length)
     }
-  }
 
-  function handleTouchEnd(e) {
-    if (!swipeStart.current) return
-    const diffX = swipeStart.current.x - e.changedTouches[0].clientX
-    const diffY = Math.abs(swipeStart.current.y - e.changedTouches[0].clientY)
-    if (Math.abs(diffX) > 40 && Math.abs(diffX) > diffY) {
-      e.preventDefault()
-      e.stopPropagation()
-      if (diffX > 0) next()
-      else prev()
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd, { passive: false })
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
     }
-    swipeStart.current = null
-  }
+  }, [fullscreen, images.length])
 
   return (
     <>
@@ -470,11 +488,9 @@ function DetailModal({ detail, onClose, onAdd }) {
       {/* FULLSCREEN MODAL */}
       {fullscreen && (
         <div
-          style={{position:'fixed',inset:0,background:'rgba(0,0,0,.95)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',touchAction:'none'}}
+          ref={fsRef}
+          style={{position:'fixed',inset:0,background:'rgba(0,0,0,.95)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',touchAction:'pan-y',overscrollBehavior:'none'}}
           onClick={()=>setFullscreen(false)}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
         >
           <button onClick={()=>setFullscreen(false)}
             style={{position:'absolute',top:16,right:16,background:'rgba(255,255,255,.15)',border:'none',color:'#fff',width:40,height:40,fontSize:'20px',cursor:'pointer',zIndex:801}}>×</button>
