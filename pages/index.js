@@ -247,6 +247,9 @@ export default function Home() {
               <img className="cart-item-img" src={item.img || 'https://images.unsplash.com/photo-1523381294911-8d3cead13475?w=120'} alt={item.name}/>
               <div className="cart-item-info">
                 <div className="cart-item-name">{item.name}</div>
+                {item.selectedSize && (
+                  <div style={{fontSize:'11px',color:'#888',marginBottom:'2px',letterSpacing:'.03em'}}>O'lcham: <b style={{color:'#111'}}>{item.selectedSize}</b></div>
+                )}
                 <div className="cart-item-price">{fmt(item.price)}</div>
                 <div className="qty-row">
                   <button className="qty-btn" onClick={() => changeQty(item.cartKey, -1)}>−</button>
