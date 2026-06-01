@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Head from 'next/head'
 import { supabase } from '../lib/supabase'
 
@@ -317,80 +317,145 @@ function DetailModal({ detail, onClose, onAdd }) {
   const images = detail.images?.length > 0 ? detail.images : (detail.img ? [detail.img] : [])
   const [activeImg, setActiveImg] = useState(0)
   const [selectedSize, setSelectedSize] = useState(null)
+  const [zoom, setZoom] = useState(false)
+  const [zoomPos, setZoomPos] = useState({x:50,y:50})
+  const [fullscreen, setFullscreen] = useState(false)
+  const imgRef = useRef()
 
-  function prev() { setActiveImg(i => (i - 1 + images.length) % images.length) }
-  function next() { setActiveImg(i => (i + 1) % images.length) }
+  function prev(e) { e?.stopPropagation(); setActiveImg(i => (i - 1 + images.length) % images.length) }
+  function next(e) { e?.stopPropagation(); setActiveImg(i => (i + 1) % images.length) }
+
+  function handleMouseMove(e) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+    setZoomPos({x, y})
+  }
 
   return (
-    <div className="modal" onClick={e => e.stopPropagation()}>
-      {/* IMAGE SLIDER */}
-      <div style={{position:'relative',background:'#f5f5f3',overflow:'hidden'}}>
-        <img
-          src={images[activeImg]}
-          alt={detail.name}
-          style={{width:'100%',height:'100%',maxHeight:'80vh',objectFit:'cover',display:'block'}}
-        />
-        {images.length > 1 && (
-          <>
-            <button onClick={prev} style={{position:'absolute',left:12,top:'50%',transform:'translateY(-50%)',background:'rgba(255,255,255,.9)',border:'none',width:36,height:36,fontSize:'18px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
-            <button onClick={next} style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'rgba(255,255,255,.9)',border:'none',width:36,height:36,fontSize:'18px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>
-            {/* Dots */}
-            <div style={{position:'absolute',bottom:12,left:'50%',transform:'translateX(-50%)',display:'flex',gap:'6px'}}>
-              {images.map((_, i) => (
-                <button key={i} onClick={()=>setActiveImg(i)}
-                  style={{width:i===activeImg?20:7,height:7,borderRadius:'4px',background:i===activeImg?'#111':'rgba(0,0,0,.3)',border:'none',cursor:'pointer',transition:'all .2s',padding:0}}/>
+    <>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        {/* LEFT: IMAGE PANEL */}
+        <div style={{position:'relative',background:'#f5f5f3',overflow:'hidden',display:'flex',flexDirection:'column'}}>
+
+          {/* Main image with zoom */}
+          <div
+            ref={imgRef}
+            style={{position:'relative',flex:1,overflow:'hidden',cursor:zoom?'crosshair':'zoom-in',minHeight:0}}
+            onMouseEnter={()=>setZoom(true)}
+            onMouseLeave={()=>setZoom(false)}
+            onMouseMove={handleMouseMove}
+            onClick={()=>setFullscreen(true)}
+          >
+            <img
+              src={images[activeImg]}
+              alt={detail.name}
+              style={{
+                width:'100%',
+                height:'100%',
+                maxHeight:'70vh',
+                objectFit:'cover',
+                display:'block',
+                transition:'transform .1s ease',
+                transformOrigin:`${zoomPos.x}% ${zoomPos.y}%`,
+                transform: zoom ? 'scale(2.2)' : 'scale(1)',
+              }}
+            />
+            {/* Zoom hint */}
+            {!zoom && (
+              <div style={{position:'absolute',bottom:10,right:10,background:'rgba(0,0,0,.5)',color:'#fff',fontSize:'10px',padding:'4px 8px',letterSpacing:'.04em',pointerEvents:'none'}}>
+                🔍 Zoom
+              </div>
+            )}
+            {/* Fullscreen hint */}
+            <button onClick={e=>{e.stopPropagation();setFullscreen(true)}}
+              style={{position:'absolute',top:10,right:10,background:'rgba(255,255,255,.85)',border:'none',width:32,height:32,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px'}}>
+              ⛶
+            </button>
+          </div>
+
+          {/* Thumbnails bottom */}
+          {images.length > 1 && (
+            <div style={{display:'flex',gap:'4px',padding:'8px',background:'#fff',overflowX:'auto'}}>
+              {images.map((img, i) => (
+                <div key={i} onClick={()=>setActiveImg(i)}
+                  style={{width:48,height:60,overflow:'hidden',cursor:'pointer',flexShrink:0,border:activeImg===i?'2px solid #111':'2px solid transparent',transition:'border-color .2s'}}>
+                  <img src={img} style={{width:'100%',height:'100%',objectFit:'cover'}} alt=""/>
+                </div>
               ))}
             </div>
-            {/* Thumbnails */}
-            <div style={{position:'absolute',bottom:32,left:0,right:0,display:'flex',gap:'6px',padding:'0 12px',justifyContent:'center',flexWrap:'wrap'}}>
-            </div>
-          </>
-        )}
-      </div>
+          )}
 
-      {/* CONTENT */}
-      <div className="modal-body">
-        <button className="close-btn" style={{display:'block',marginLeft:'auto',marginBottom:'12px'}} onClick={onClose}>×</button>
-
-        {/* Thumbnail strip */}
-        {images.length > 1 && (
-          <div style={{display:'flex',gap:'6px',marginBottom:'16px',flexWrap:'wrap'}}>
-            {images.map((img, i) => (
-              <div key={i} onClick={()=>setActiveImg(i)}
-                style={{width:52,height:52,overflow:'hidden',cursor:'pointer',flexShrink:0,border:activeImg===i?'2px solid #111':'2px solid transparent',transition:'border-color .2s'}}>
-                <img src={img} style={{width:'100%',height:'100%',objectFit:'cover'}} alt=""/>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="modal-cat">{detail.cat}</div>
-        <div className="modal-name serif">{detail.name}</div>
-        <div className="modal-prices">
-          <span className="modal-price">{fmt(detail.price)}</span>
-          {detail.old_price && <span className="modal-old">{fmt(detail.old_price)}</span>}
+          {/* Prev/Next arrows */}
+          {images.length > 1 && (
+            <>
+              <button onClick={prev} style={{position:'absolute',left:8,top:'40%',transform:'translateY(-50%)',background:'rgba(255,255,255,.9)',border:'none',width:36,height:36,fontSize:'20px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>‹</button>
+              <button onClick={next} style={{position:'absolute',right:8,top:'40%',transform:'translateY(-50%)',background:'rgba(255,255,255,.9)',border:'none',width:36,height:36,fontSize:'20px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>›</button>
+            </>
+          )}
         </div>
 
-        {detail.sizes?.length > 0 && (
-          <>
-            <div className="sizes-lbl">O'lchamni tanlang</div>
-            <div className="sizes-row">
-              {detail.sizes.map(s => (
-                <button key={s} className={`size-btn${selectedSize===s?' active':''}`} onClick={()=>setSelectedSize(s)}>{s}</button>
+        {/* RIGHT: CONTENT */}
+        <div className="modal-body">
+          <button className="close-btn" style={{display:'block',marginLeft:'auto',marginBottom:'12px'}} onClick={onClose}>×</button>
+          <div className="modal-cat">{detail.cat}</div>
+          <div className="modal-name serif">{detail.name}</div>
+          <div className="modal-prices">
+            <span className="modal-price">{fmt(detail.price)}</span>
+            {detail.old_price && <span className="modal-old">{fmt(detail.old_price)}</span>}
+          </div>
+          {detail.sizes?.length > 0 && (
+            <>
+              <div className="sizes-lbl">O'lchamni tanlang</div>
+              <div className="sizes-row">
+                {detail.sizes.map(s => (
+                  <button key={s} className={`size-btn${selectedSize===s?' active':''}`} onClick={()=>setSelectedSize(s)}>{s}</button>
+                ))}
+              </div>
+            </>
+          )}
+          {detail.description && <div className="modal-desc">{detail.description}</div>}
+          <button className="btn-dark" style={{width:'100%',padding:'14px',fontSize:'11px',letterSpacing:'.1em'}}
+            onClick={() => { onAdd(detail.id); onClose() }}>
+            SAVATGA QO'SHISH
+          </button>
+          <div className="modal-stock">Zaxirada: {detail.stock} ta</div>
+        </div>
+      </div>
+
+      {/* FULLSCREEN MODAL */}
+      {fullscreen && (
+        <div
+          style={{position:'fixed',inset:0,background:'rgba(0,0,0,.95)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center'}}
+          onClick={()=>setFullscreen(false)}
+        >
+          <button onClick={()=>setFullscreen(false)}
+            style={{position:'absolute',top:16,right:16,background:'rgba(255,255,255,.15)',border:'none',color:'#fff',width:40,height:40,fontSize:'20px',cursor:'pointer',zIndex:801}}>×</button>
+          {images.length > 1 && (
+            <>
+              <button onClick={e=>{e.stopPropagation();prev()}}
+                style={{position:'absolute',left:16,top:'50%',transform:'translateY(-50%)',background:'rgba(255,255,255,.15)',border:'none',color:'#fff',width:44,height:44,fontSize:'24px',cursor:'pointer',zIndex:801}}>‹</button>
+              <button onClick={e=>{e.stopPropagation();next()}}
+                style={{position:'absolute',right:16,top:'50%',transform:'translateY(-50%)',background:'rgba(255,255,255,.15)',border:'none',color:'#fff',width:44,height:44,fontSize:'24px',cursor:'pointer',zIndex:801}}>›</button>
+            </>
+          )}
+          <img
+            src={images[activeImg]}
+            alt={detail.name}
+            onClick={e=>e.stopPropagation()}
+            style={{maxWidth:'90vw',maxHeight:'90vh',objectFit:'contain',userSelect:'none'}}
+          />
+          {images.length > 1 && (
+            <div style={{position:'absolute',bottom:20,left:'50%',transform:'translateX(-50%)',display:'flex',gap:'8px'}}>
+              {images.map((_,i) => (
+                <button key={i} onClick={e=>{e.stopPropagation();setActiveImg(i)}}
+                  style={{width:i===activeImg?24:8,height:8,borderRadius:'4px',background:i===activeImg?'#fff':'rgba(255,255,255,.4)',border:'none',cursor:'pointer',transition:'all .2s',padding:0}}/>
               ))}
             </div>
-          </>
-        )}
-
-        {detail.description && <div className="modal-desc">{detail.description}</div>}
-
-        <button className="btn-dark" style={{width:'100%',padding:'14px',fontSize:'11px',letterSpacing:'.1em'}}
-          onClick={() => { onAdd(detail.id); onClose() }}>
-          SAVATGA QO'SHISH
-        </button>
-        <div className="modal-stock">Zaxirada: {detail.stock} ta</div>
-      </div>
-    </div>
+          )}
+        </div>
+      )}
+    </>
   )
 }
 
