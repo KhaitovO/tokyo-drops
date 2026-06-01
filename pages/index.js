@@ -36,19 +36,20 @@ export default function Home() {
 
   function notify(msg) { setNotif(msg); setTimeout(() => setNotif(null), 2200) }
 
-  function addToCart(id) {
+  function addToCart(id, size) {
     const p = products.find(x => x.id === id)
     if (!p) return
+    const cartKey = size ? `${id}-${size}` : String(id)
     setCart(prev => {
-      const ex = prev.find(x => x.id === id)
-      if (ex) return prev.map(x => x.id === id ? { ...x, qty: x.qty + 1 } : x)
-      return [...prev, { ...p, qty: 1 }]
+      const ex = prev.find(x => x.cartKey === cartKey)
+      if (ex) return prev.map(x => x.cartKey === cartKey ? { ...x, qty: x.qty + 1 } : x)
+      return [...prev, { ...p, qty: 1, cartKey, selectedSize: size || null }]
     })
-    notify("Savatga qo'shildi ✓")
+    notify("Savatga qo'shildi ✓" + (size ? ` (${size})` : ''))
   }
 
-  function removeFromCart(id) { setCart(c => c.filter(x => x.id !== id)) }
-  function changeQty(id, d) { setCart(c => c.map(x => x.id === id ? { ...x, qty: x.qty + d } : x).filter(x => x.qty > 0)) }
+  function removeFromCart(cartKey) { setCart(c => c.filter(x => x.cartKey !== cartKey)) }
+  function changeQty(cartKey, d) { setCart(c => c.map(x => x.cartKey === cartKey ? { ...x, qty: x.qty + d } : x).filter(x => x.qty > 0)) }
   function goPage(p, c) { setPage(p); if (c) setCat(c); setMobileNav(false); window.scrollTo(0, 0) }
 
   async function submitOrder() {
@@ -248,10 +249,10 @@ export default function Home() {
                 <div className="cart-item-name">{item.name}</div>
                 <div className="cart-item-price">{fmt(item.price)}</div>
                 <div className="qty-row">
-                  <button className="qty-btn" onClick={() => changeQty(item.id, -1)}>−</button>
+                  <button className="qty-btn" onClick={() => changeQty(item.cartKey, -1)}>−</button>
                   <span className="qty-num">{item.qty}</span>
-                  <button className="qty-btn" onClick={() => changeQty(item.id, 1)}>+</button>
-                  <button className="rm-btn" onClick={() => removeFromCart(item.id)}>O'chir</button>
+                  <button className="qty-btn" onClick={() => changeQty(item.cartKey, 1)}>+</button>
+                  <button className="rm-btn" onClick={() => removeFromCart(item.cartKey)}>O'chir</button>
                 </div>
               </div>
             </div>
@@ -305,7 +306,9 @@ export default function Home() {
       </div>
 
       {/* DETAIL MODAL WITH SLIDER */}
-      <div className={`modal-bg${detail ? ' show' : ''}`} onClick={() => setDetailId(null)}>
+      <div className={`modal-bg${detail ? ' show' : ''}`} onClick={() => setDetailId(null)}
+        style={{overflowY: detail ? 'auto' : 'hidden'}}
+        onTouchMove={e => e.stopPropagation()}>
         {detail && <DetailModal detail={detail} onClose={() => setDetailId(null)} onAdd={addToCart} />}
       </div>
     </>
@@ -415,9 +418,19 @@ function DetailModal({ detail, onClose, onAdd }) {
             </>
           )}
           {detail.description && <div className="modal-desc">{detail.description}</div>}
-          <button className="btn-dark" style={{width:'100%',padding:'14px',fontSize:'11px',letterSpacing:'.1em'}}
-            onClick={() => { onAdd(detail.id); onClose() }}>
-            SAVATGA QO'SHISH
+          {detail.sizes?.length > 0 && !selectedSize && (
+            <p style={{fontSize:'12px',color:'#c0392b',marginBottom:'10px',letterSpacing:'.02em'}}>⚠ Iltimos, o'lchamni tanlang</p>
+          )}
+          <button className="btn-dark" style={{width:'100%',padding:'14px',fontSize:'11px',letterSpacing:'.1em',opacity:(detail.sizes?.length>0&&!selectedSize)?0.6:1}}
+            onClick={() => {
+              if (detail.sizes?.length > 0 && !selectedSize) {
+                document.querySelector('.sizes-lbl')?.scrollIntoView({behavior:'smooth'})
+                return
+              }
+              onAdd(detail.id, selectedSize)
+              onClose()
+            }}>
+            SAVATGA QO'SHISH {selectedSize ? `— ${selectedSize}` : ''}
           </button>
           <div className="modal-stock">Zaxirada: {detail.stock} ta</div>
         </div>
