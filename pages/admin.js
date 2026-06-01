@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 const CATS = ["Kosmetika","Kiyim","Poyabzal","Atirlar","Aksessuarlar"]
 const SIZES_ALL = ["XS","S","M","L","XL","XXL","36","37","38","39","40","41","42","43","44"]
 const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
-const EMPTY = {name:"",cat:"Kosmetika",price:"",old:"",images:[],sizes:[],stock:"",is_new:false,is_sale:false,description:""}
+const EMPTY = {name:"",cat:"Kosmetika",price:"",old:"",images:[],sizes:[],stock:"",is_new:false,is_sale:false,description:"",urlInput:""}
 const CLOUD_NAME = "dxt6bj2cx"
 const UPLOAD_PRESET = "tokyo-drops"
 
@@ -74,6 +74,15 @@ export default function Admin() {
   function removeImage(idx) {
     setForm(f => ({ ...f, images: f.images.filter((_, i) => i !== idx) }))
     setActiveImg(0)
+  }
+
+  function addImageUrl() {
+    const url = (form.urlInput||'').trim()
+    if (!url) return
+    if (!url.startsWith('http')) { notify("URL http:// bilan boshlanishi kerak"); return }
+    if ((form.images||[]).length >= 8) { notify("Maksimal 8 ta rasm"); return }
+    setForm(f => ({ ...f, images: [...(f.images||[]), url], urlInput: '' }))
+    notify("Rasm qo'shildi ✓")
   }
 
   async function del(id) {
@@ -264,6 +273,15 @@ export default function Admin() {
             </div>
             <input ref={fileRef} type="file" multiple accept="image/*" style={{display:'none'}}
               onChange={e=>uploadImages(Array.from(e.target.files))}/>
+            {/* URL INPUT */}
+            <div style={{marginTop:"10px"}}>
+              <p style={{fontSize:"10px",color:"#aaa",letterSpacing:".06em",textTransform:"uppercase",marginBottom:"6px"}}>Yoki URL orqali qo'shing</p>
+              <div style={{display:"flex",gap:"8px"}}>
+                <input type="text" value={form.urlInput||''} onChange={e=>upd('urlInput',e.target.value)} onKeyDown={e=>e.key==='Enter'&&addImageUrl()} placeholder="https://example.com/rasm.jpg" style={{flex:1,border:"1px solid #e4e2dd",padding:"8px 11px",fontSize:"12px",background:"#fafaf8"}}/>
+                <button type="button" onClick={addImageUrl} style={{background:"#111",color:"#fff",border:"none",padding:"8px 14px",fontSize:"12px",cursor:"pointer",whiteSpace:"nowrap"}}>+ Qo'sh</button>
+              </div>
+              <p style={{fontSize:"10px",color:"#bbb",marginTop:"4px"}}>Enter bosib ham qo'shish mumkin · Jami {(form.images||[]).length}/8 ta rasm</p>
+            </div>
           </div>
 
           {[
