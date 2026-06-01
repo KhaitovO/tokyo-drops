@@ -340,15 +340,28 @@ function DetailModal({ detail, onClose, onAdd }) {
   }
 
   function handleTouchStart(e) {
-    swipeStart.current = e.touches[0].clientX
+    swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }
+
+  function handleTouchMove(e) {
+    if (!swipeStart.current) return
+    const diffX = Math.abs(e.touches[0].clientX - swipeStart.current.x)
+    const diffY = Math.abs(e.touches[0].clientY - swipeStart.current.y)
+    if (diffX > diffY && diffX > 10) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
   }
 
   function handleTouchEnd(e) {
-    if (swipeStart.current === null) return
-    const diff = swipeStart.current - e.changedTouches[0].clientX
-    if (Math.abs(diff) > 40) {
-      if (diff > 0) next(e)
-      else prev(e)
+    if (!swipeStart.current) return
+    const diffX = swipeStart.current.x - e.changedTouches[0].clientX
+    const diffY = Math.abs(swipeStart.current.y - e.changedTouches[0].clientY)
+    if (Math.abs(diffX) > 40 && Math.abs(diffX) > diffY) {
+      e.preventDefault()
+      e.stopPropagation()
+      if (diffX > 0) next()
+      else prev()
     }
     swipeStart.current = null
   }
@@ -457,9 +470,10 @@ function DetailModal({ detail, onClose, onAdd }) {
       {/* FULLSCREEN MODAL */}
       {fullscreen && (
         <div
-          style={{position:'fixed',inset:0,background:'rgba(0,0,0,.95)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',touchAction:'pan-y'}}
+          style={{position:'fixed',inset:0,background:'rgba(0,0,0,.95)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',touchAction:'none'}}
           onClick={()=>setFullscreen(false)}
           onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
           <button onClick={()=>setFullscreen(false)}
