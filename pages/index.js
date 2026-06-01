@@ -327,6 +327,7 @@ function DetailModal({ detail, onClose, onAdd }) {
   const [zoomPos, setZoomPos] = useState({x:50,y:50})
   const [fullscreen, setFullscreen] = useState(false)
   const imgRef = useRef()
+  const swipeStart = useRef(null)
 
   function prev(e) { e?.stopPropagation(); setActiveImg(i => (i - 1 + images.length) % images.length) }
   function next(e) { e?.stopPropagation(); setActiveImg(i => (i + 1) % images.length) }
@@ -336,6 +337,20 @@ function DetailModal({ detail, onClose, onAdd }) {
     const x = ((e.clientX - rect.left) / rect.width) * 100
     const y = ((e.clientY - rect.top) / rect.height) * 100
     setZoomPos({x, y})
+  }
+
+  function handleTouchStart(e) {
+    swipeStart.current = e.touches[0].clientX
+  }
+
+  function handleTouchEnd(e) {
+    if (swipeStart.current === null) return
+    const diff = swipeStart.current - e.changedTouches[0].clientX
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) next(e)
+      else prev(e)
+    }
+    swipeStart.current = null
   }
 
   return (
@@ -442,8 +457,10 @@ function DetailModal({ detail, onClose, onAdd }) {
       {/* FULLSCREEN MODAL */}
       {fullscreen && (
         <div
-          style={{position:'fixed',inset:0,background:'rgba(0,0,0,.95)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center'}}
+          style={{position:'fixed',inset:0,background:'rgba(0,0,0,.95)',zIndex:800,display:'flex',alignItems:'center',justifyContent:'center',touchAction:'pan-y'}}
           onClick={()=>setFullscreen(false)}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
           <button onClick={()=>setFullscreen(false)}
             style={{position:'absolute',top:16,right:16,background:'rgba(255,255,255,.15)',border:'none',color:'#fff',width:40,height:40,fontSize:'20px',cursor:'pointer',zIndex:801}}>×</button>
