@@ -355,7 +355,7 @@ function DetailModal({ detail, onClose, onAdd }) {
       if (!swipeRef.current) return
       const dx = Math.abs(e.touches[0].clientX - swipeRef.current.x)
       const dy = Math.abs(e.touches[0].clientY - swipeRef.current.y)
-      if (dx > dy && dx > 8) {
+      if (dx > dy * 1.5 && dx > 20) {
         e.preventDefault()
         e.stopPropagation()
       }
@@ -366,7 +366,7 @@ function DetailModal({ detail, onClose, onAdd }) {
       const dx = swipeRef.current.x - e.changedTouches[0].clientX
       const dy = Math.abs(swipeRef.current.y - e.changedTouches[0].clientY)
       swipeRef.current = null
-      if (Math.abs(dx) < 40 || Math.abs(dx) < dy) return
+      if (Math.abs(dx) < 80 || Math.abs(dx) < dy * 1.5) return
       e.preventDefault()
       e.stopPropagation()
       if (dx > 0) setActiveImg(i => (i + 1) % images.length)
