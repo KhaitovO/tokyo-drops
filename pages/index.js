@@ -79,7 +79,7 @@ export default function Home() {
     window.scrollTo(0, 0)
   }
 
-  function setSpecialFilter(type) {
+  function handleSpecialFilter(type) {
     setSpecialFilter(type)
     setActiveCat(null)
     setActiveSubCat(null)
@@ -222,8 +222,8 @@ export default function Home() {
                   <h1 className="hero-title serif">Original<br/><em>Yaponiyadan</em></h1>
                   <p className="hero-sub">Uniqlo, Nike, Shiseido va yuzlab boshqa yapon brendlari. To'g'ridan-to'g'ri, tez va ishonchli.</p>
                   <div className="hero-btns">
-                    <button className="btn-dark" onClick={()=>setSpecialFilter('new')}>YANGILIKLAR</button>
-                    <button className="btn-outline" onClick={()=>setSpecialFilter('sale')}>CHEGIRMALAR</button>
+                    <button className="btn-dark" onClick={()=>handleSpecialFilter('new')}>YANGILIKLAR</button>
+                    <button className="btn-outline" onClick={()=>handleSpecialFilter('sale')}>CHEGIRMALAR</button>
                   </div>
                 </section>
 
