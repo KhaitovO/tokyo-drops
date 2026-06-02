@@ -222,8 +222,20 @@ export default function Home() {
                   <h1 className="hero-title serif">Original<br/><em>Yaponiyadan</em></h1>
                   <p className="hero-sub">Uniqlo, Nike, Shiseido va yuzlab boshqa yapon brendlari. To'g'ridan-to'g'ri, tez va ishonchli.</p>
                   <div className="hero-btns">
-                    <button className="btn-dark" onClick={()=>handleSpecialFilter('new')}>YANGILIKLAR</button>
-                    <button className="btn-outline" onClick={()=>handleSpecialFilter('sale')}>CHEGIRMALAR</button>
+                    <button
+                      onClick={()=>handleSpecialFilter('new')}
+                      style={{background:'#fff',color:'#111',border:'1.5px solid #111',padding:'12px 28px',fontSize:'11px',fontWeight:500,letterSpacing:'.1em',cursor:'pointer',transition:'background .2s, color .2s'}}
+                      onMouseEnter={e=>{e.currentTarget.style.background='#111';e.currentTarget.style.color='#fff'}}
+                      onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#111'}}>
+                      YANGILIKLAR
+                    </button>
+                    <button
+                      onClick={()=>handleSpecialFilter('sale')}
+                      style={{background:'#fff',color:'#111',border:'1.5px solid #111',padding:'12px 28px',fontSize:'11px',fontWeight:500,letterSpacing:'.1em',cursor:'pointer',transition:'background .2s, color .2s'}}
+                      onMouseEnter={e=>{e.currentTarget.style.background='#111';e.currentTarget.style.color='#fff'}}
+                      onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#111'}}>
+                      CHEGIRMALAR
+                    </button>
                   </div>
                 </section>
 
