@@ -2,14 +2,24 @@ import React, { useState, useEffect, useRef } from 'react'
 import Head from 'next/head'
 import { supabase } from '../lib/supabase'
 
-const CATS = ["Barchasi","Kosmetika","Kiyim","Poyabzal","Atirlar","Aksessuarlar"]
+const CATEGORIES = {
+  "Ayollar": ["T-shirt/Sviter", "Ko'ylak/Bluzka", "Shim/Yubka", "Sho'rtik", "Auter/Kurtka", "Ichki kiyim", "Aksessuarlar", "Oyoq kiyimi"],
+  "Erkaklar": ["T-shirt/Sviter", "Ko'ylak/Polo", "Shim", "Sho'rtik", "Auter/Kurtka", "Ichki kiyim", "Oyoq kiyimi"],
+  "Bolalar": ["Qizlar", "O'g'il bolalar"],
+  "Baby": ["Kiyimlar"],
+  "Kosmetika": ["Yuz uchun", "Qo'l uchun", "Oyoq uchun", "Quyoshdan himoya", "Maska"],
+  "Atirlar": [],
+  "Aksessuarlar": [],
+}
+const MAIN_CATS = Object.keys(CATEGORIES)
 const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
 
 export default function Home() {
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState('store')
-  const [cat, setCat] = useState('Barchasi')
+  const [activeCat, setActiveCat] = useState(null)
+  const [activeSubCat, setActiveSubCat] = useState(null)
   const [cart, setCart] = useState([])
   const [cartOpen, setCartOpen] = useState(false)
   const [detailId, setDetailId] = useState(null)
@@ -17,24 +27,54 @@ export default function Home() {
   const [notif, setNotif] = useState(null)
   const [orderForm, setOrderForm] = useState(false)
   const [orderData, setOrderData] = useState({name:'',phone:'',address:''})
+  const [dropdownOpen, setDropdownOpen] = useState(null)
 
   useEffect(() => { fetchProducts() }, [])
+  useEffect(() => {
+    function handleClick() { setDropdownOpen(null) }
+    document.addEventListener('click', handleClick)
+    return () => document.removeEventListener('click', handleClick)
+  }, [])
 
   async function fetchProducts() {
     setLoading(true)
-    const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false })
-    if (!error && data) setProducts(data)
+    const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false })
+    setProducts(data || [])
     setLoading(false)
   }
 
-  const filtered = cat === 'Barchasi' ? products : products.filter(p => p.cat === cat)
-  const newArrivals = products.filter(p => p.is_new).slice(0, 4)
-  const onSale = products.filter(p => p.is_sale).slice(0, 4)
   const detail = products.find(p => p.id === detailId)
   const cartCount = cart.reduce((s, i) => s + i.qty, 0)
   const cartTotal = cart.reduce((s, i) => s + i.price * i.qty, 0)
 
+  const filtered = products.filter(p => {
+    if (!activeCat) return true
+    if (p.main_cat !== activeCat) return false
+    if (activeSubCat && p.sub_cat !== activeSubCat) return false
+    return true
+  })
+
+  const newArrivals = products.filter(p => p.is_new).slice(0, 4)
+  const onSale = products.filter(p => p.is_sale).slice(0, 4)
+
   function notify(msg) { setNotif(msg); setTimeout(() => setNotif(null), 2200) }
+
+  function selectCat(main, sub) {
+    setActiveCat(main)
+    setActiveSubCat(sub || null)
+    setPage('store')
+    setDropdownOpen(null)
+    setMobileNav(false)
+    window.scrollTo(0, 0)
+  }
+
+  function goHome() {
+    setActiveCat(null)
+    setActiveSubCat(null)
+    setPage('store')
+    setMobileNav(false)
+    window.scrollTo(0, 0)
+  }
 
   function addToCart(id, size) {
     const p = products.find(x => x.id === id)
@@ -50,7 +90,6 @@ export default function Home() {
 
   function removeFromCart(cartKey) { setCart(c => c.filter(x => x.cartKey !== cartKey)) }
   function changeQty(cartKey, d) { setCart(c => c.map(x => x.cartKey === cartKey ? { ...x, qty: x.qty + d } : x).filter(x => x.qty > 0)) }
-  function goPage(p, c) { setPage(p); if (c) setCat(c); setMobileNav(false); window.scrollTo(0, 0) }
 
   async function submitOrder() {
     if (!orderData.phone) { notify('Telefon raqam majburiy!'); return }
@@ -59,7 +98,7 @@ export default function Home() {
       phone: orderData.phone,
       address: orderData.address,
       total: cartTotal,
-      items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty })),
+      items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, size: i.selectedSize })),
       status: 'new'
     }])
     if (!error) {
@@ -67,6 +106,8 @@ export default function Home() {
       notify('Buyurtma qabul qilindi! ✓')
     } else notify('Xato: ' + error.message)
   }
+
+  const isHome = !activeCat && page === 'store'
 
   return (
     <>
@@ -78,32 +119,81 @@ export default function Home() {
 
       {notif && <div className="notif show">{notif}</div>}
 
-      <div className={`mobile-nav${mobileNav ? ' open' : ''}`}>
-        <button className="mobile-nav-close" onClick={() => setMobileNav(false)}>×</button>
-        {CATS.map(c => <a key={c} onClick={() => goPage('store', c)}>{c}</a>)}
-        <a onClick={() => goPage('news')}>Yangiliklar</a>
+      {/* MOBILE NAV */}
+      <div className={`mobile-nav${mobileNav?' open':''}`}>
+        <button className="mobile-nav-close" onClick={()=>setMobileNav(false)}>×</button>
+        <a onClick={goHome} style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'28px',fontWeight:300}}>Bosh sahifa</a>
+        {MAIN_CATS.map(cat => (
+          <div key={cat}>
+            <a style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'24px',fontWeight:400,color:'#111',padding:'10px 0',borderBottom:'1px solid #f0f0f0',display:'block',cursor:'pointer'}}
+              onClick={()=>selectCat(cat, null)}>{cat}</a>
+            {CATEGORIES[cat].length > 0 && (
+              <div style={{paddingLeft:'16px'}}>
+                {CATEGORIES[cat].map(sub => (
+                  <a key={sub} onClick={()=>selectCat(cat,sub)}
+                    style={{fontSize:'14px',color:'#777',padding:'6px 0',display:'block',cursor:'pointer',borderBottom:'1px solid #f8f8f8'}}>
+                    {sub}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+        <a onClick={()=>{setPage('news');setMobileNav(false)}} style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'24px',fontWeight:400}}>Yangiliklar</a>
       </div>
 
+      {/* HEADER */}
       <header className="header">
         <div className="header-inner">
-          <div className="logo serif" onClick={() => goPage('store', 'Barchasi')}>TOKYO <em>Drops</em></div>
-          <nav className="nav">
-            <a onClick={() => goPage('store', 'Barchasi')} className={page === 'store' ? 'active' : ''}>Do'kon</a>
-            {CATS.slice(1).map(c => <a key={c} onClick={() => goPage('store', c)}>{c}</a>)}
-            <a onClick={() => goPage('news')} className={page === 'news' ? 'active' : ''}>Yangiliklar</a>
+          <div className="logo serif" onClick={goHome}>TOKYO <em>Drops</em></div>
+
+          {/* Desktop nav with dropdowns */}
+          <nav className="nav" style={{gap:'20px'}}>
+            {MAIN_CATS.map(cat => (
+              <div key={cat} style={{position:'relative'}}
+                onClick={e=>e.stopPropagation()}>
+                <a
+                  className={activeCat===cat?'active':''}
+                  onMouseEnter={()=>CATEGORIES[cat].length>0&&setDropdownOpen(cat)}
+                  onClick={()=>selectCat(cat,null)}
+                  style={{cursor:'pointer',display:'flex',alignItems:'center',gap:'3px'}}>
+                  {cat}
+                  {CATEGORIES[cat].length > 0 && <span style={{fontSize:'8px',opacity:.5}}>▾</span>}
+                </a>
+                {dropdownOpen===cat && CATEGORIES[cat].length>0 && (
+                  <div
+                    onMouseLeave={()=>setDropdownOpen(null)}
+                    style={{position:'absolute',top:'100%',left:'50%',transform:'translateX(-50%)',background:'#fff',border:'1px solid #e8e8e4',minWidth:'160px',zIndex:300,paddingTop:'8px',paddingBottom:'8px',marginTop:'8px',boxShadow:'0 4px 20px rgba(0,0,0,.08)'}}>
+                    {CATEGORIES[cat].map(sub => (
+                      <div key={sub} onClick={()=>selectCat(cat,sub)}
+                        style={{padding:'8px 18px',fontSize:'12px',color:'#555',cursor:'pointer',letterSpacing:'.03em',whiteSpace:'nowrap',transition:'background .15s'}}
+                        onMouseEnter={e=>e.currentTarget.style.background='#f7f7f5'}
+                        onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                        {sub}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+            <a onClick={()=>setPage('news')} className={page==='news'?'active':''} style={{cursor:'pointer'}}>Yangiliklar</a>
           </nav>
+
           <div className="header-actions">
-            <button className="icon-btn" onClick={() => setCartOpen(true)}>
+            <button className="icon-btn" onClick={()=>setCartOpen(true)}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <path d="M16 10a4 4 0 0 1-8 0"/>
               </svg>
               {cartCount > 0 && <span className="cart-count">{cartCount}</span>}
             </button>
-            <button className="hamburger" onClick={() => setMobileNav(true)}><span/><span/><span/></button>
+            <button className="hamburger" onClick={()=>setMobileNav(true)}><span/><span/><span/></button>
           </div>
         </div>
       </header>
 
+      {/* TICKER */}
       <div className="ticker">
         <span className="ticker-track">
           {'🇯🇵 YAPONIYADAN TO\'G\'RIDAN-TO\'G\'RI · UNIQLO · NIKE · SHISEIDO · ISSEY MIYAKE · GU · PORTER · 10-14 KUNDA YETKAZIB BERAMIZ · PAYME · CLICK · '.repeat(3)}
@@ -113,64 +203,68 @@ export default function Home() {
       <main>
         {page === 'store' && (
           <>
-            <section className="hero">
-              <p className="hero-eyebrow">Yaponiyadan — O'zbekistonga</p>
-              <h1 className="hero-title serif">Original<br/><em>Yaponiyadan</em></h1>
-              <p className="hero-sub">Uniqlo, Nike, Shiseido va yuzlab boshqa yapon brendlari. To'g'ridan-to'g'ri, tez va ishonchli.</p>
-              <div className="hero-btns">
-                <button className="btn-dark" onClick={() => setCat('Barchasi')}>Barcha mahsulotlar</button>
-                <button className="btn-outline" onClick={() => goPage('news')}>Yangiliklar</button>
-              </div>
-            </section>
-
-            <div className="cats-wrap">
-              <div className="cats-scroll">
-                {CATS.map(c => <button key={c} className={`cat-pill${cat === c ? ' active' : ''}`} onClick={() => setCat(c)}>{c}</button>)}
-              </div>
-            </div>
-
-            {loading ? (
-              <div style={{textAlign:'center',padding:'60px',color:'#999',fontSize:'13px'}}>Yuklanmoqda...</div>
-            ) : cat !== 'Barchasi' ? (
-              <div className="section">
-                <div className="section-head">
-                  <span className="section-title">{cat} — {filtered.length} ta mahsulot</span>
-                </div>
-                {filtered.length === 0 ? (
-                  <div style={{textAlign:'center',padding:'60px',color:'#bbb'}}>
-                    <p style={{fontSize:'32px',marginBottom:'12px'}}>🛍</p>
-                    <p>Hozircha mahsulot yo'q</p>
-                  </div>
-                ) : (
-                  <div className="grid">{filtered.map(p => <ProductCard key={p.id} p={p} onAdd={addToCart} onDetail={setDetailId}/>)}</div>
-                )}
-              </div>
-            ) : (
+            {isHome ? (
+              /* HOME PAGE */
               <>
+                <section className="hero">
+                  <p className="hero-eyebrow">Yaponiyadan — O'zbekistonga</p>
+                  <h1 className="hero-title serif">Original<br/><em>Yaponiyadan</em></h1>
+                  <p className="hero-sub">Uniqlo, Nike, Shiseido va yuzlab boshqa yapon brendlari. To'g'ridan-to'g'ri, tez va ishonchli.</p>
+                  <div className="hero-btns">
+                    <button className="btn-dark" onClick={()=>selectCat('Ayollar',null)}>Ayollar</button>
+                    <button className="btn-outline" onClick={()=>selectCat('Erkaklar',null)}>Erkaklar</button>
+                  </div>
+                </section>
+
+                {/* Category tiles */}
+                <div className="section">
+                  <div className="section-head"><span className="section-title">Kategoriyalar</span></div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:'12px'}}>
+                    {MAIN_CATS.map(cat => (
+                      <div key={cat} onClick={()=>selectCat(cat,null)}
+                        style={{background:'#f7f7f5',padding:'20px 16px',cursor:'pointer',textAlign:'center',transition:'background .2s'}}
+                        onMouseEnter={e=>e.currentTarget.style.background='#eeede9'}
+                        onMouseLeave={e=>e.currentTarget.style.background='#f7f7f5'}>
+                        <div style={{fontSize:'22px',marginBottom:'8px'}}>
+                          {cat==='Ayollar'?'👗':cat==='Erkaklar'?'👔':cat==='Bolalar'?'🧒':cat==='Baby'?'👶':cat==='Kosmetika'?'💄':cat==='Atirlar'?'🌸':'💎'}
+                        </div>
+                        <div style={{fontSize:'13px',fontWeight:500,letterSpacing:'.03em'}}>{cat}</div>
+                        {CATEGORIES[cat].length > 0 && (
+                          <div style={{fontSize:'10px',color:'#aaa',marginTop:'4px'}}>{CATEGORIES[cat].length} ta bo'lim</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {newArrivals.length > 0 && (
                   <div className="section">
                     <div className="section-head"><span className="section-title">Yangi keldi</span></div>
-                    <div className="grid">{newArrivals.map(p => <ProductCard key={p.id} p={p} onAdd={addToCart} onDetail={setDetailId}/>)}</div>
+                    <div className="grid">{newArrivals.map(p=><ProductCard key={p.id} p={p} onAdd={addToCart} onDetail={setDetailId}/>)}</div>
                   </div>
                 )}
+
                 {products.length === 0 && (
-                  <div style={{textAlign:'center',padding:'80px 24px',color:'#bbb'}}>
+                  <div style={{textAlign:'center',padding:'60px 24px',color:'#bbb'}}>
                     <p style={{fontSize:'48px',marginBottom:'16px'}}>🇯🇵</p>
-                    <p style={{fontSize:'16px',marginBottom:'8px',color:'#888'}}>Mahsulotlar tez orada qo'shiladi</p>
+                    <p style={{fontSize:'15px',color:'#888',marginBottom:'8px'}}>Mahsulotlar tez orada qo'shiladi</p>
                   </div>
                 )}
+
                 <div className="cta-banner">
                   <p style={{fontSize:'10px',letterSpacing:'.18em',color:'#999',textTransform:'uppercase',marginBottom:'14px'}}>Har haftada yangi mahsulotlar</p>
                   <h2 className="cta-title serif">Telegram kanalimizga<br/><em>obuna bo'ling</em></h2>
                   <p className="cta-sub">Yangi kelgan mahsulotlar va chegirmalardan birinchi xabardor bo'ling</p>
                   <button className="btn-dark">TELEGRAM KANALGA O'TISH</button>
                 </div>
+
                 {onSale.length > 0 && (
                   <div className="section">
                     <div className="section-head"><span className="section-title">Aksiyada</span></div>
-                    <div className="grid">{onSale.map(p => <ProductCard key={p.id} p={p} onAdd={addToCart} onDetail={setDetailId}/>)}</div>
+                    <div className="grid">{onSale.map(p=><ProductCard key={p.id} p={p} onAdd={addToCart} onDetail={setDetailId}/>)}</div>
                   </div>
                 )}
+
                 <div className="features">
                   <div className="features-grid">
                     {[
@@ -178,12 +272,54 @@ export default function Home() {
                       {icon:'⚡',t:'10–14 kun',s:'Tez yetkazib berish'},
                       {icon:'💳',t:'Payme · Click',s:"Qulay to'lov usullari"},
                       {icon:'✅',t:'3+ yillik tajriba',s:'1000+ mamnun mijoz'},
-                    ].map(f => (
+                    ].map(f=>(
                       <div key={f.t}><div className="feat-icon">{f.icon}</div><div className="feat-title">{f.t}</div><div className="feat-sub">{f.s}</div></div>
                     ))}
                   </div>
                 </div>
               </>
+            ) : (
+              /* CATEGORY PAGE */
+              <div className="section">
+                {/* Breadcrumb */}
+                <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'20px',fontSize:'12px',color:'#aaa'}}>
+                  <span onClick={goHome} style={{cursor:'pointer',color:'#888'}}>Bosh sahifa</span>
+                  <span>›</span>
+                  <span onClick={()=>selectCat(activeCat,null)} style={{cursor:'pointer',color:activeSubCat?'#888':'#111'}}>{activeCat}</span>
+                  {activeSubCat && <><span>›</span><span style={{color:'#111'}}>{activeSubCat}</span></>}
+                </div>
+
+                {/* Sub-category pills */}
+                {CATEGORIES[activeCat]?.length > 0 && (
+                  <div style={{display:'flex',gap:'8px',marginBottom:'24px',flexWrap:'wrap'}}>
+                    <button onClick={()=>selectCat(activeCat,null)}
+                      style={{padding:'7px 16px',fontSize:'11px',fontWeight:500,letterSpacing:'.06em',border:'1px solid',borderColor:!activeSubCat?'#111':'#ddd',background:!activeSubCat?'#111':'transparent',color:!activeSubCat?'#fff':'#666',cursor:'pointer',textTransform:'uppercase'}}>
+                      Barchasi
+                    </button>
+                    {CATEGORIES[activeCat].map(sub => (
+                      <button key={sub} onClick={()=>selectCat(activeCat,sub)}
+                        style={{padding:'7px 16px',fontSize:'11px',fontWeight:500,letterSpacing:'.06em',border:'1px solid',borderColor:activeSubCat===sub?'#111':'#ddd',background:activeSubCat===sub?'#111':'transparent',color:activeSubCat===sub?'#fff':'#666',cursor:'pointer',textTransform:'uppercase'}}>
+                        {sub}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="section-head">
+                  <span className="section-title">{activeSubCat||activeCat} — {filtered.length} ta mahsulot</span>
+                </div>
+
+                {loading ? (
+                  <div style={{textAlign:'center',padding:'60px',color:'#999'}}>Yuklanmoqda...</div>
+                ) : filtered.length === 0 ? (
+                  <div style={{textAlign:'center',padding:'60px',color:'#bbb'}}>
+                    <p style={{fontSize:'32px',marginBottom:'12px'}}>🛍</p>
+                    <p>Hozircha mahsulot yo'q</p>
+                  </div>
+                ) : (
+                  <div className="grid">{filtered.map(p=><ProductCard key={p.id} p={p} onAdd={addToCart} onDetail={setDetailId}/>)}</div>
+                )}
+              </div>
             )}
           </>
         )}
@@ -195,9 +331,9 @@ export default function Home() {
             {[
               {id:1,date:"28 May 2025",title:"Yangi Uniqlo 2025 yoz kolleksiyasi keldi",desc:"Linen, keng shimlar va pastel ranglar — bu yozning eng trend buyumlari."},
               {id:2,date:"20 May 2025",title:"Shiseido yangi SPF seriyasi",desc:"Yaponiyada 1-o'rindagi SPF kremlar endi bizda mavjud."},
-              {id:3,date:"12 May 2025",title:"Nike Sacai x CLOT — cheklangan miqdor",desc:"Yaponiyaning ekskluziv sneaker drops'i. Bugun buyurtma bering."},
-              {id:4,date:"5 May 2025",title:"Yetkazib berish muddatlari qisqardi: 10-14 kun",desc:"Yangi logistika hamkorligimiz tufayli buyurtmalar tezroq yetib keladi."},
-            ].map(n => (
+              {id:3,date:"12 May 2025",title:"Nike Sacai x CLOT — cheklangan miqdor",desc:"Yaponiyaning ekskluziv sneaker drops'i."},
+              {id:4,date:"5 May 2025",title:"Yetkazib berish muddatlari qisqardi",desc:"Yangi logistika hamkorligimiz tufayli buyurtmalar tezroq yetib keladi."},
+            ].map(n=>(
               <div key={n.id} className="news-card">
                 <div className="news-date">{n.date}</div>
                 <div className="news-title">{n.title}</div>
@@ -208,6 +344,7 @@ export default function Home() {
         )}
       </main>
 
+      {/* FOOTER */}
       <footer className="footer">
         <div className="footer-inner">
           <div>
@@ -215,8 +352,8 @@ export default function Home() {
             <div className="footer-desc">Yaponiyaning eng yaxshi brendlari — to'g'ridan-to'g'ri sizga.</div>
           </div>
           <div className="footer-col">
-            <h4>Do'kon</h4>
-            {CATS.slice(1).map(c => <a key={c} onClick={() => goPage('store', c)}>{c}</a>)}
+            <h4>Kategoriyalar</h4>
+            {MAIN_CATS.map(c=><a key={c} onClick={()=>selectCat(c,null)} style={{cursor:'pointer'}}>{c}</a>)}
           </div>
           <div className="footer-col">
             <h4>Ma'lumot</h4>
@@ -233,41 +370,42 @@ export default function Home() {
         </div>
       </footer>
 
-      <div className={`overlay${cartOpen ? ' show' : ''}`} onClick={() => setCartOpen(false)}/>
-      <div className={`cart-drawer${cartOpen ? ' open' : ''}`}>
+      {/* CART DRAWER */}
+      <div className={`overlay${cartOpen?' show':''}`} onClick={()=>setCartOpen(false)}/>
+      <div className={`cart-drawer${cartOpen?' open':''}`}>
         <div className="drawer-header">
           <span className="drawer-title serif">Savat</span>
-          <button className="close-btn" onClick={() => setCartOpen(false)}>×</button>
+          <button className="close-btn" onClick={()=>setCartOpen(false)}>×</button>
         </div>
         <div className="drawer-body">
-          {cart.length === 0 ? (
+          {cart.length===0 ? (
             <p style={{textAlign:'center',color:'#ccc',marginTop:'60px',fontSize:'13px'}}>Savat bo'sh</p>
-          ) : cart.map(item => (
-            <div key={item.id} className="cart-item">
-              <img className="cart-item-img" src={item.img || 'https://images.unsplash.com/photo-1523381294911-8d3cead13475?w=120'} alt={item.name}/>
+          ) : cart.map(item=>(
+            <div key={item.cartKey} className="cart-item">
+              <img className="cart-item-img" src={item.img||'https://images.unsplash.com/photo-1523381294911-8d3cead13475?w=120'} alt={item.name}/>
               <div className="cart-item-info">
                 <div className="cart-item-name">{item.name}</div>
                 {item.selectedSize && (
-                  <div style={{fontSize:'11px',color:'#888',marginBottom:'2px',letterSpacing:'.03em'}}>O'lcham: <b style={{color:'#111'}}>{item.selectedSize}</b></div>
+                  <div style={{fontSize:'11px',color:'#888',marginBottom:'2px'}}>O'lcham: <b style={{color:'#111'}}>{item.selectedSize}</b></div>
                 )}
                 <div className="cart-item-price">{fmt(item.price)}</div>
                 <div className="qty-row">
-                  <button className="qty-btn" onClick={() => changeQty(item.cartKey, -1)}>−</button>
+                  <button className="qty-btn" onClick={()=>changeQty(item.cartKey,-1)}>−</button>
                   <span className="qty-num">{item.qty}</span>
-                  <button className="qty-btn" onClick={() => changeQty(item.cartKey, 1)}>+</button>
-                  <button className="rm-btn" onClick={() => removeFromCart(item.cartKey)}>O'chir</button>
+                  <button className="qty-btn" onClick={()=>changeQty(item.cartKey,1)}>+</button>
+                  <button className="rm-btn" onClick={()=>removeFromCart(item.cartKey)}>O'chir</button>
                 </div>
               </div>
             </div>
           ))}
         </div>
-        {cart.length > 0 && (
+        {cart.length>0 && (
           <div className="drawer-footer">
             <div className="cart-total-row">
               <span className="cart-total-label">Jami</span>
               <span className="cart-total-amount">{fmt(cartTotal)}</span>
             </div>
-            <button className="btn-dark" style={{width:'100%',padding:'14px',fontSize:'11px',letterSpacing:'.1em'}} onClick={() => setOrderForm(true)}>
+            <button className="btn-dark" style={{width:'100%',padding:'14px',fontSize:'11px',letterSpacing:'.1em'}} onClick={()=>setOrderForm(true)}>
               BUYURTMA BERISH
             </button>
             <p className="pay-note">Payme · Click · Naqd pul</p>
@@ -275,26 +413,28 @@ export default function Home() {
         )}
       </div>
 
-      <div className={`form-bg${orderForm ? ' show' : ''}`} onClick={() => setOrderForm(false)}>
-        <div className="form-box" onClick={e => e.stopPropagation()}>
+      {/* ORDER FORM */}
+      <div className={`form-bg${orderForm?' show':''}`} onClick={()=>setOrderForm(false)}>
+        <div className="form-box" onClick={e=>e.stopPropagation()}>
           <div className="form-title serif">Buyurtma berish</div>
           <div className="field">
             <label>Ismingiz</label>
-            <input type="text" placeholder="Ism Familiya" value={orderData.name} onChange={e => setOrderData(d => ({...d, name: e.target.value}))}/>
+            <input type="text" placeholder="Ism Familiya" value={orderData.name} onChange={e=>setOrderData(d=>({...d,name:e.target.value}))}/>
           </div>
           <div className="field">
             <label>Telefon *</label>
-            <input type="tel" placeholder="+998 90 000 00 00" value={orderData.phone} onChange={e => setOrderData(d => ({...d, phone: e.target.value}))}/>
+            <input type="tel" placeholder="+998 90 000 00 00" value={orderData.phone} onChange={e=>setOrderData(d=>({...d,phone:e.target.value}))}/>
           </div>
           <div className="field">
             <label>Manzil</label>
-            <input type="text" placeholder="Toshkent, Chilonzor..." value={orderData.address} onChange={e => setOrderData(d => ({...d, address: e.target.value}))}/>
+            <input type="text" placeholder="Toshkent, Chilonzor..." value={orderData.address} onChange={e=>setOrderData(d=>({...d,address:e.target.value}))}/>
           </div>
           <div style={{background:'#f7f7f5',padding:'14px',marginBottom:'16px'}}>
             <div style={{fontSize:'12px',color:'#888',marginBottom:'8px'}}>Buyurtma:</div>
-            {cart.map(i => (
-              <div key={i.id} style={{display:'flex',justifyContent:'space-between',fontSize:'13px',marginBottom:'4px'}}>
-                <span>{i.name} x{i.qty}</span><span>{fmt(i.price * i.qty)}</span>
+            {cart.map(i=>(
+              <div key={i.cartKey} style={{display:'flex',justifyContent:'space-between',fontSize:'13px',marginBottom:'4px'}}>
+                <span>{i.name}{i.selectedSize?` (${i.selectedSize})`:''} x{i.qty}</span>
+                <span>{fmt(i.price*i.qty)}</span>
               </div>
             ))}
             <div style={{display:'flex',justifyContent:'space-between',fontSize:'14px',fontWeight:600,marginTop:'8px',paddingTop:'8px',borderTop:'1px solid #e4e2dd'}}>
@@ -303,16 +443,16 @@ export default function Home() {
           </div>
           <div className="form-actions">
             <button className="btn-dark" onClick={submitOrder}>TASDIQLASH</button>
-            <button className="btn-outline" onClick={() => setOrderForm(false)}>BEKOR</button>
+            <button className="btn-outline" onClick={()=>setOrderForm(false)}>BEKOR</button>
           </div>
         </div>
       </div>
 
-      {/* DETAIL MODAL WITH SLIDER */}
-      <div className={`modal-bg${detail ? ' show' : ''}`} onClick={() => setDetailId(null)}
-        style={{overflowY: detail ? 'auto' : 'hidden'}}
-        onTouchMove={e => e.stopPropagation()}>
-        {detail && <DetailModal detail={detail} onClose={() => setDetailId(null)} onAdd={addToCart} />}
+      {/* DETAIL MODAL */}
+      <div className={`modal-bg${detail?' show':''}`} onClick={()=>setDetailId(null)}
+        style={{overflowY:detail?'auto':'hidden'}}
+        onTouchMove={e=>e.stopPropagation()}>
+        {detail && <DetailModal detail={detail} onClose={()=>setDetailId(null)} onAdd={addToCart}/>}
       </div>
     </>
   )
@@ -326,120 +466,67 @@ function DetailModal({ detail, onClose, onAdd }) {
   const [zoom, setZoom] = useState(false)
   const [zoomPos, setZoomPos] = useState({x:50,y:50})
   const [fullscreen, setFullscreen] = useState(false)
-  const imgRef = useRef()
   const fsRef = useRef()
   const swipeRef = useRef(null)
-  const activeImgRef = useRef(activeImg)
-  activeImgRef.current = activeImg
 
-  function prev() { setActiveImg(i => (i - 1 + images.length) % images.length) }
-  function next() { setActiveImg(i => (i + 1) % images.length) }
+  function prev() { setActiveImg(i => (i-1+images.length)%images.length) }
+  function next() { setActiveImg(i => (i+1)%images.length) }
 
   function handleMouseMove(e) {
     const rect = e.currentTarget.getBoundingClientRect()
-    const x = ((e.clientX - rect.left) / rect.width) * 100
-    const y = ((e.clientY - rect.top) / rect.height) * 100
-    setZoomPos({x, y})
+    setZoomPos({ x:((e.clientX-rect.left)/rect.width)*100, y:((e.clientY-rect.top)/rect.height)*100 })
   }
 
-  // Native touch events for fullscreen - bypasses passive listener issue
   useEffect(() => {
     if (!fullscreen || !fsRef.current) return
     const el = fsRef.current
-
-    function onTouchStart(e) {
-      swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
-    }
-
-    function onTouchMove(e) {
+    function onTS(e) { swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }
+    function onTM(e) {
       if (!swipeRef.current) return
       const dx = Math.abs(e.touches[0].clientX - swipeRef.current.x)
       const dy = Math.abs(e.touches[0].clientY - swipeRef.current.y)
-      if (dx > dy * 1.5 && dx > 20) {
-        e.preventDefault()
-        e.stopPropagation()
-      }
+      if (dx > dy*1.5 && dx > 20) { e.preventDefault(); e.stopPropagation() }
     }
-
-    function onTouchEnd(e) {
+    function onTE(e) {
       if (!swipeRef.current) return
       const dx = swipeRef.current.x - e.changedTouches[0].clientX
       const dy = Math.abs(swipeRef.current.y - e.changedTouches[0].clientY)
       swipeRef.current = null
-      if (Math.abs(dx) < 80 || Math.abs(dx) < dy * 1.5) return
-      e.preventDefault()
-      e.stopPropagation()
-      if (dx > 0) setActiveImg(i => (i + 1) % images.length)
-      else setActiveImg(i => (i - 1 + images.length) % images.length)
+      if (Math.abs(dx) < 80 || Math.abs(dx) < dy*1.5) return
+      e.preventDefault(); e.stopPropagation()
+      if (dx > 0) setActiveImg(i=>(i+1)%images.length)
+      else setActiveImg(i=>(i-1+images.length)%images.length)
     }
-
-    el.addEventListener('touchstart', onTouchStart, { passive: true })
-    el.addEventListener('touchmove', onTouchMove, { passive: false })
-    el.addEventListener('touchend', onTouchEnd, { passive: false })
-
-    return () => {
-      el.removeEventListener('touchstart', onTouchStart)
-      el.removeEventListener('touchmove', onTouchMove)
-      el.removeEventListener('touchend', onTouchEnd)
-    }
+    el.addEventListener('touchstart', onTS, {passive:true})
+    el.addEventListener('touchmove', onTM, {passive:false})
+    el.addEventListener('touchend', onTE, {passive:false})
+    return () => { el.removeEventListener('touchstart',onTS); el.removeEventListener('touchmove',onTM); el.removeEventListener('touchend',onTE) }
   }, [fullscreen, images.length])
 
   return (
     <>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        {/* LEFT: IMAGE PANEL */}
+      <div className="modal" onClick={e=>e.stopPropagation()}>
         <div style={{position:'relative',background:'#f5f5f3',overflow:'hidden',display:'flex',flexDirection:'column'}}>
-
-          {/* Main image with zoom */}
-          <div
-            ref={imgRef}
-            style={{position:'relative',flex:1,overflow:'hidden',cursor:zoom?'crosshair':'zoom-in',minHeight:0}}
-            onMouseEnter={()=>setZoom(true)}
-            onMouseLeave={()=>setZoom(false)}
-            onMouseMove={handleMouseMove}
-            onClick={()=>setFullscreen(true)}
-          >
-            <img
-              src={images[activeImg]}
-              alt={detail.name}
-              style={{
-                width:'100%',
-                height:'100%',
-                maxHeight:'70vh',
-                objectFit:'cover',
-                display:'block',
-                transition:'transform .1s ease',
-                transformOrigin:`${zoomPos.x}% ${zoomPos.y}%`,
-                transform: zoom ? 'scale(2.2)' : 'scale(1)',
-              }}
-            />
-            {/* Zoom hint */}
-            {!zoom && (
-              <div style={{position:'absolute',bottom:10,right:10,background:'rgba(0,0,0,.5)',color:'#fff',fontSize:'10px',padding:'4px 8px',letterSpacing:'.04em',pointerEvents:'none'}}>
-                🔍 Zoom
-              </div>
-            )}
-            {/* Fullscreen hint */}
+          <div style={{position:'relative',flex:1,overflow:'hidden',cursor:zoom?'crosshair':'zoom-in',minHeight:0}}
+            onMouseEnter={()=>setZoom(true)} onMouseLeave={()=>setZoom(false)}
+            onMouseMove={handleMouseMove} onClick={()=>setFullscreen(true)}>
+            <img src={images[activeImg]} alt={detail.name}
+              style={{width:'100%',height:'100%',maxHeight:'70vh',objectFit:'cover',display:'block',transition:'transform .1s ease',transformOrigin:`${zoomPos.x}% ${zoomPos.y}%`,transform:zoom?'scale(2.2)':'scale(1)'}}/>
+            {!zoom && <div style={{position:'absolute',bottom:10,right:10,background:'rgba(0,0,0,.5)',color:'#fff',fontSize:'10px',padding:'4px 8px',pointerEvents:'none'}}>🔍 Zoom</div>}
             <button onClick={e=>{e.stopPropagation();setFullscreen(true)}}
-              style={{position:'absolute',top:10,right:10,background:'rgba(255,255,255,.85)',border:'none',width:32,height:32,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px'}}>
-              ⛶
-            </button>
+              style={{position:'absolute',top:10,right:10,background:'rgba(255,255,255,.85)',border:'none',width:32,height:32,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px'}}>⛶</button>
           </div>
-
-          {/* Thumbnails bottom */}
-          {images.length > 1 && (
+          {images.length>1 && (
             <div style={{display:'flex',gap:'4px',padding:'8px',background:'#fff',overflowX:'auto'}}>
-              {images.map((img, i) => (
+              {images.map((img,i)=>(
                 <div key={i} onClick={()=>setActiveImg(i)}
-                  style={{width:48,height:60,overflow:'hidden',cursor:'pointer',flexShrink:0,border:activeImg===i?'2px solid #111':'2px solid transparent',transition:'border-color .2s'}}>
+                  style={{width:48,height:60,overflow:'hidden',cursor:'pointer',flexShrink:0,border:activeImg===i?'2px solid #111':'2px solid transparent'}}>
                   <img src={img} style={{width:'100%',height:'100%',objectFit:'cover'}} alt=""/>
                 </div>
               ))}
             </div>
           )}
-
-          {/* Prev/Next arrows */}
-          {images.length > 1 && (
+          {images.length>1 && (
             <>
               <button onClick={prev} style={{position:'absolute',left:8,top:'40%',transform:'translateY(-50%)',background:'rgba(255,255,255,.9)',border:'none',width:36,height:36,fontSize:'20px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>‹</button>
               <button onClick={next} style={{position:'absolute',right:8,top:'40%',transform:'translateY(-50%)',background:'rgba(255,255,255,.9)',border:'none',width:36,height:36,fontSize:'20px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>›</button>
@@ -447,82 +534,62 @@ function DetailModal({ detail, onClose, onAdd }) {
           )}
         </div>
 
-        {/* RIGHT: CONTENT */}
         <div className="modal-body">
           <button className="close-btn" style={{display:'block',marginLeft:'auto',marginBottom:'12px'}} onClick={onClose}>×</button>
-          <div className="modal-cat">{detail.cat}</div>
+          <div className="modal-cat">{detail.main_cat} {detail.sub_cat ? `· ${detail.sub_cat}` : ''}</div>
           <div className="modal-name serif">{detail.name}</div>
           <div className="modal-prices">
             <span className="modal-price">{fmt(detail.price)}</span>
             {detail.old_price && <span className="modal-old">{fmt(detail.old_price)}</span>}
           </div>
-          {detail.sizes?.length > 0 && (
+          {detail.sizes?.length>0 && (
             <>
               <div className="sizes-lbl">O'lchamni tanlang</div>
               <div className="sizes-row">
-                {detail.sizes.map(s => (
+                {detail.sizes.map(s=>(
                   <button key={s} className={`size-btn${selectedSize===s?' active':''}`} onClick={()=>setSelectedSize(s)}>{s}</button>
                 ))}
               </div>
             </>
           )}
-          {detail.description && <div className="modal-desc">{detail.description}</div>}
-          {detail.sizes?.length > 0 && !selectedSize && (
-            <p style={{fontSize:'12px',color:'#c0392b',marginBottom:'10px',letterSpacing:'.02em'}}>⚠ Iltimos, o'lchamni tanlang</p>
+          {detail.sizes?.length>0 && !selectedSize && (
+            <p style={{fontSize:'12px',color:'#c0392b',marginBottom:'10px'}}>⚠ Iltimos, o'lchamni tanlang</p>
           )}
-          <button className="btn-dark" style={{width:'100%',padding:'14px',fontSize:'11px',letterSpacing:'.1em',opacity:(detail.sizes?.length>0&&!selectedSize)?0.6:1}}
-            onClick={() => {
-              if (detail.sizes?.length > 0 && !selectedSize) {
-                document.querySelector('.sizes-lbl')?.scrollIntoView({behavior:'smooth'})
-                return
-              }
+          {detail.description && <div className="modal-desc">{detail.description}</div>}
+          <button className="btn-dark"
+            style={{width:'100%',padding:'14px',fontSize:'11px',letterSpacing:'.1em',opacity:(detail.sizes?.length>0&&!selectedSize)?0.6:1}}
+            onClick={()=>{
+              if (detail.sizes?.length>0 && !selectedSize) return
               onAdd(detail.id, selectedSize)
               onClose()
             }}>
-            SAVATGA QO'SHISH {selectedSize ? `— ${selectedSize}` : ''}
+            SAVATGA QO'SHISH {selectedSize?`— ${selectedSize}`:''}
           </button>
           <div className="modal-stock">Zaxirada: {detail.stock} ta</div>
         </div>
       </div>
 
-      {/* FULLSCREEN MODAL */}
       {fullscreen && (
-        <div
-          ref={fsRef}
+        <div ref={fsRef}
           style={{position:'fixed',inset:0,background:'rgba(0,0,0,.96)',zIndex:800,display:'flex',flexDirection:'column',touchAction:'pan-y'}}
-          onClick={()=>setFullscreen(false)}
-        >
-          {/* Top bar */}
+          onClick={()=>setFullscreen(false)}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 16px',flexShrink:0}} onClick={e=>e.stopPropagation()}>
             <span style={{color:'rgba(255,255,255,.7)',fontSize:'13px'}}>{activeImg+1} / {images.length}</span>
-            <button onClick={()=>setFullscreen(false)}
-              style={{background:'rgba(255,255,255,.15)',border:'none',color:'#fff',width:36,height:36,fontSize:'18px',cursor:'pointer',borderRadius:'50%'}}>×</button>
+            <button onClick={()=>setFullscreen(false)} style={{background:'rgba(255,255,255,.15)',border:'none',color:'#fff',width:36,height:36,fontSize:'18px',cursor:'pointer',borderRadius:'50%'}}>×</button>
           </div>
-
-          {/* Main image */}
-          <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',position:'relative'}} onClick={e=>e.stopPropagation()}>
-            <img
-              src={images[activeImg]}
-              alt={detail.name}
-              style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',userSelect:'none',pointerEvents:'none'}}
-            />
+          <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
+            <img src={images[activeImg]} alt={detail.name} style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',userSelect:'none',pointerEvents:'none'}}/>
           </div>
-
-          {/* Bottom: thumbnails + arrows */}
-          {images.length > 1 && (
+          {images.length>1 && (
             <div style={{flexShrink:0,padding:'12px 16px 24px'}} onClick={e=>e.stopPropagation()}>
-              {/* Arrow buttons - big and easy to tap */}
               <div style={{display:'flex',justifyContent:'center',gap:'16px',marginBottom:'12px'}}>
-                <button onClick={e=>{e.stopPropagation();prev()}}
-                  style={{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',width:52,height:52,fontSize:'22px',cursor:'pointer',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',WebkitTapHighlightColor:'transparent'}}>‹</button>
-                <button onClick={e=>{e.stopPropagation();next()}}
-                  style={{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',width:52,height:52,fontSize:'22px',cursor:'pointer',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',WebkitTapHighlightColor:'transparent'}}>›</button>
+                <button onClick={prev} style={{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',width:52,height:52,fontSize:'22px',cursor:'pointer',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
+                <button onClick={next} style={{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',width:52,height:52,fontSize:'22px',cursor:'pointer',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>
               </div>
-              {/* Thumbnail strip */}
               <div style={{display:'flex',gap:'6px',justifyContent:'center',flexWrap:'wrap'}}>
-                {images.map((img,i) => (
+                {images.map((img,i)=>(
                   <div key={i} onClick={e=>{e.stopPropagation();setActiveImg(i)}}
-                    style={{width:48,height:48,overflow:'hidden',cursor:'pointer',border:activeImg===i?'2px solid #fff':'2px solid rgba(255,255,255,.2)',borderRadius:'2px',flexShrink:0,transition:'border-color .2s'}}>
+                    style={{width:48,height:48,overflow:'hidden',cursor:'pointer',border:activeImg===i?'2px solid #fff':'2px solid rgba(255,255,255,.2)',borderRadius:'2px',flexShrink:0}}>
                     <img src={img} style={{width:'100%',height:'100%',objectFit:'cover'}} alt=""/>
                   </div>
                 ))}
@@ -537,23 +604,22 @@ function DetailModal({ detail, onClose, onAdd }) {
 
 function ProductCard({ p, onAdd, onDetail }) {
   const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
-  const images = p.images?.length > 0 ? p.images : (p.img ? [p.img] : [])
+  const images = p.images?.length>0 ? p.images : (p.img?[p.img]:[])
   const [imgIdx, setImgIdx] = useState(0)
-
   return (
-    <div className="pcard" onClick={() => onDetail(p.id)}>
+    <div className="pcard" onClick={()=>onDetail(p.id)}>
       <div className="pcard-img-wrap">
-        <img src={images[imgIdx] || 'https://images.unsplash.com/photo-1523381294911-8d3cead13475?w=400'} alt={p.name} loading="lazy"/>
-        {images.length > 1 && (
+        <img src={images[imgIdx]||'https://images.unsplash.com/photo-1523381294911-8d3cead13475?w=400'} alt={p.name} loading="lazy"/>
+        {images.length>1 && (
           <>
             <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i-1+images.length)%images.length)}}
-              style={{position:'absolute',left:6,top:'50%',transform:'translateY(-50%)',background:'rgba(255,255,255,.85)',border:'none',width:28,height:28,fontSize:'16px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:0}}
-              className="card-arrow card-arrow-l">‹</button>
+              className="card-arrow card-arrow-l"
+              style={{position:'absolute',left:6,top:'50%',transform:'translateY(-50%)',background:'rgba(255,255,255,.85)',border:'none',width:28,height:28,fontSize:'16px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:0}}>‹</button>
             <button onClick={e=>{e.stopPropagation();setImgIdx(i=>(i+1)%images.length)}}
-              style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',background:'rgba(255,255,255,.85)',border:'none',width:28,height:28,fontSize:'16px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:0}}
-              className="card-arrow card-arrow-r">›</button>
+              className="card-arrow card-arrow-r"
+              style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',background:'rgba(255,255,255,.85)',border:'none',width:28,height:28,fontSize:'16px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',opacity:0}}>›</button>
             <div style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',display:'flex',gap:'4px'}}>
-              {images.map((_,i) => (
+              {images.map((_,i)=>(
                 <span key={i} style={{width:i===imgIdx?14:5,height:5,borderRadius:'3px',background:i===imgIdx?'#fff':'rgba(255,255,255,.6)',display:'block',transition:'all .2s'}}/>
               ))}
             </div>
@@ -564,13 +630,13 @@ function ProductCard({ p, onAdd, onDetail }) {
           {p.is_sale && <span className="ptag ptag-sale">Sale</span>}
         </div>
       </div>
-      <div className="pcard-cat">{p.cat}</div>
+      <div className="pcard-cat">{p.main_cat}{p.sub_cat?` · ${p.sub_cat}`:''}</div>
       <div className="pcard-name">{p.name}</div>
       <div className="pcard-prices">
         <span className="price-now">{fmt(p.price)}</span>
         {p.old_price && <span className="price-old">{fmt(p.old_price)}</span>}
       </div>
-      <button className="btn-dark pcard-btn" onClick={e => { e.stopPropagation(); onAdd(p.id) }}>SAVATGA</button>
+      <button className="btn-dark pcard-btn" onClick={e=>{e.stopPropagation();onAdd(p.id)}}>SAVATGA</button>
     </div>
   )
 }
