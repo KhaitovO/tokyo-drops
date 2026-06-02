@@ -8,8 +8,6 @@ const CATEGORIES = {
   "Bolalar": ["Qizlar", "O'g'il bolalar"],
   "Baby": ["Kiyimlar"],
   "Kosmetika": ["Yuz uchun", "Qo'l uchun", "Oyoq uchun", "Quyoshdan himoya", "Maska"],
-  "Atirlar": [],
-  "Aksessuarlar": [],
 }
 const MAIN_CATS = Object.keys(CATEGORIES)
 const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
@@ -219,18 +217,20 @@ export default function Home() {
                 {/* Category tiles */}
                 <div className="section">
                   <div className="section-head"><span className="section-title">Kategoriyalar</span></div>
-                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:'12px'}}>
+                  <div style={{display:'flex',gap:'0',borderTop:'1px solid #e8e8e4',borderLeft:'1px solid #e8e8e4',flexWrap:'wrap'}}>
                     {MAIN_CATS.map(cat => (
                       <div key={cat} onClick={()=>selectCat(cat,null)}
-                        style={{background:'#f7f7f5',padding:'20px 16px',cursor:'pointer',textAlign:'center',transition:'background .2s'}}
-                        onMouseEnter={e=>e.currentTarget.style.background='#eeede9'}
-                        onMouseLeave={e=>e.currentTarget.style.background='#f7f7f5'}>
-                        <div style={{fontSize:'22px',marginBottom:'8px'}}>
-                          {cat==='Ayollar'?'👗':cat==='Erkaklar'?'👔':cat==='Bolalar'?'🧒':cat==='Baby'?'👶':cat==='Kosmetika'?'💄':cat==='Atirlar'?'🌸':'💎'}
-                        </div>
-                        <div style={{fontSize:'13px',fontWeight:500,letterSpacing:'.03em'}}>{cat}</div>
+                        style={{flex:'1 1 calc(20% - 0px)',minWidth:'100px',padding:'20px 12px',cursor:'pointer',textAlign:'center',borderRight:'1px solid #e8e8e4',borderBottom:'1px solid #e8e8e4',background:'#fff',transition:'background .15s'}}
+                        onMouseEnter={e=>e.currentTarget.style.background='#f7f7f5'}
+                        onMouseLeave={e=>e.currentTarget.style.background='#fff'}>
+                        <div style={{fontSize:'13px',fontWeight:500,letterSpacing:'.04em',color:'#111',marginBottom:'6px',textTransform:'uppercase'}}>{cat}</div>
                         {CATEGORIES[cat].length > 0 && (
-                          <div style={{fontSize:'10px',color:'#aaa',marginTop:'4px'}}>{CATEGORIES[cat].length} ta bo'lim</div>
+                          <div style={{display:'flex',flexWrap:'wrap',gap:'3px',justifyContent:'center'}}>
+                            {CATEGORIES[cat].slice(0,3).map(sub => (
+                              <span key={sub} style={{fontSize:'10px',color:'#aaa'}}>{sub}{CATEGORIES[cat].indexOf(sub)<2?'·':''}</span>
+                            ))}
+                            {CATEGORIES[cat].length > 3 && <span style={{fontSize:'10px',color:'#bbb'}}>+{CATEGORIES[cat].length-3}</span>}
+                          </div>
                         )}
                       </div>
                     ))}
@@ -556,6 +556,22 @@ function DetailModal({ detail, onClose, onAdd }) {
             <p style={{fontSize:'12px',color:'#c0392b',marginBottom:'10px'}}>⚠ Iltimos, o'lchamni tanlang</p>
           )}
           {detail.description && <div className="modal-desc">{detail.description}</div>}
+          {(detail.volume || detail.duration) && (
+            <div style={{display:'flex',gap:'12px',marginBottom:'16px',flexWrap:'wrap'}}>
+              {detail.volume && (
+                <div style={{background:'#f7f7f5',padding:'8px 14px',fontSize:'12px'}}>
+                  <span style={{color:'#aaa',marginRight:'6px'}}>Hajmi:</span>
+                  <span style={{fontWeight:500}}>{detail.volume}</span>
+                </div>
+              )}
+              {detail.duration && (
+                <div style={{background:'#f7f7f5',padding:'8px 14px',fontSize:'12px'}}>
+                  <span style={{color:'#aaa',marginRight:'6px'}}>Muddat:</span>
+                  <span style={{fontWeight:500}}>{detail.duration}</span>
+                </div>
+              )}
+            </div>
+          )}
           <button className="btn-dark"
             style={{width:'100%',padding:'14px',fontSize:'11px',letterSpacing:'.1em',opacity:(detail.sizes?.length>0&&!selectedSize)?0.6:1}}
             onClick={()=>{

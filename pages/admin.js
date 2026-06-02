@@ -9,13 +9,12 @@ const CATEGORIES = {
   "Bolalar": ["Qizlar", "O'g'il bolalar"],
   "Baby": ["Kiyimlar"],
   "Kosmetika": ["Yuz uchun", "Qo'l uchun", "Oyoq uchun", "Quyoshdan himoya", "Maska"],
-  "Atirlar": [],
-  "Aksessuarlar": [],
 }
 const MAIN_CATS = Object.keys(CATEGORIES)
 const SIZES_ALL = ["XS","S","M","L","XL","XXL","36","37","38","39","40","41","42","43","44"]
+const KIDS_SIZES = ["80cm","90cm","100cm","110cm","120cm","130cm","140cm","150cm","160cm","XS(kids)","S(kids)","M(kids)","L(kids)"]
 const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
-const EMPTY = {name:"",main_cat:"Ayollar",sub_cat:"T-shirt/Sviter",price:"",old:"",images:[],sizes:[],stock:"",is_new:false,is_sale:false,description:"",urlInput:""}
+const EMPTY = {name:"",main_cat:"Ayollar",sub_cat:"T-shirt/Sviter",price:"",old:"",images:[],sizes:[],stock:"",is_new:false,is_sale:false,description:"",urlInput:"",volume:"",duration:""}
 const CLOUD_NAME = "dxt6bj2cx"
 const UPLOAD_PRESET = "tokyo-drops"
 
@@ -65,7 +64,9 @@ export default function Admin() {
       stock: String(p.stock),
       sizes: p.sizes || [],
       images: p.images || (p.img ? [p.img] : []),
-      urlInput: ''
+      urlInput: '',
+      volume: p.volume || '',
+      duration: p.duration || ''
     })
     setEditId(p.id); setActiveImg(0); setFormOpen(true)
   }
@@ -127,7 +128,9 @@ export default function Admin() {
       stock: +form.stock || 0,
       is_new: form.is_new,
       is_sale: form.is_sale,
-      description: form.description || ''
+      description: form.description || '',
+      volume: form.volume || '',
+      duration: form.duration || ''
     }
     let error
     if (editId) ({ error } = await supabase.from('products').update(obj).eq('id', editId))
@@ -349,14 +352,39 @@ export default function Admin() {
             </div>
           ))}
 
-          <div className="field">
-            <label>O'lchamlar</label>
-            <div className="sizes-picker">
-              {SIZES_ALL.map(s=>(
-                <button key={s} type="button" className={`sp${form.sizes.includes(s)?' active':''}`} onClick={()=>toggleSz(s)}>{s}</button>
-              ))}
+          {/* Sizes - smart based on category */}
+          {form.main_cat !== 'Kosmetika' && (
+            <div className="field">
+              <label>O'lchamlar</label>
+              {(form.main_cat === 'Bolalar' || form.main_cat === 'Baby') ? (
+                <div className="sizes-picker">
+                  {KIDS_SIZES.map(s=>(
+                    <button key={s} type="button" className={`sp${form.sizes.includes(s)?' active':''}`} onClick={()=>toggleSz(s)}>{s}</button>
+                  ))}
+                </div>
+              ) : (
+                <div className="sizes-picker">
+                  {SIZES_ALL.map(s=>(
+                    <button key={s} type="button" className={`sp${form.sizes.includes(s)?' active':''}`} onClick={()=>toggleSz(s)}>{s}</button>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
+          )}
+
+          {/* Kosmetika extra fields */}
+          {form.main_cat === 'Kosmetika' && (
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
+              <div className="field" style={{marginBottom:0}}>
+                <label>Hajmi (ml/g/dona)</label>
+                <input type="text" value={form.volume||''} placeholder="Masalan: 50ml, 30g, 30dona" onChange={e=>upd('volume',e.target.value)}/>
+              </div>
+              <div className="field" style={{marginBottom:0}}>
+                <label>Muddat / Necha kunlik</label>
+                <input type="text" value={form.duration||''} placeholder="Masalan: 30 kunlik, 60 kapsul" onChange={e=>upd('duration',e.target.value)}/>
+              </div>
+            </div>
+          )}
           <div className="checks">
             <label><input type="checkbox" checked={form.is_new} onChange={e=>upd('is_new',e.target.checked)}/> Yangi</label>
             <label><input type="checkbox" checked={form.is_sale} onChange={e=>upd('is_sale',e.target.checked)}/> Aksiyada</label>
