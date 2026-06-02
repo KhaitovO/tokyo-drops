@@ -26,6 +26,7 @@ export default function Home() {
   const [orderForm, setOrderForm] = useState(false)
   const [orderData, setOrderData] = useState({name:'',phone:'',address:''})
   const [dropdownOpen, setDropdownOpen] = useState(null)
+  const [specialFilter, setSpecialFilter] = useState(null) // 'new' | 'sale' | null
 
   useEffect(() => { fetchProducts() }, [])
   useEffect(() => {
@@ -46,6 +47,8 @@ export default function Home() {
   const cartTotal = cart.reduce((s, i) => s + i.price * i.qty, 0)
 
   const filtered = products.filter(p => {
+    if (specialFilter === 'new') return p.is_new
+    if (specialFilter === 'sale') return p.is_sale
     if (!activeCat) return true
     if (p.main_cat !== activeCat) return false
     if (activeSubCat && p.sub_cat !== activeSubCat) return false
@@ -60,6 +63,7 @@ export default function Home() {
   function selectCat(main, sub) {
     setActiveCat(main)
     setActiveSubCat(sub || null)
+    setSpecialFilter(null)
     setPage('store')
     setDropdownOpen(null)
     setMobileNav(false)
@@ -69,8 +73,17 @@ export default function Home() {
   function goHome() {
     setActiveCat(null)
     setActiveSubCat(null)
+    setSpecialFilter(null)
     setPage('store')
     setMobileNav(false)
+    window.scrollTo(0, 0)
+  }
+
+  function setSpecialFilter(type) {
+    setSpecialFilter(type)
+    setActiveCat(null)
+    setActiveSubCat(null)
+    setPage('store')
     window.scrollTo(0, 0)
   }
 
@@ -105,7 +118,7 @@ export default function Home() {
     } else notify('Xato: ' + error.message)
   }
 
-  const isHome = !activeCat && page === 'store'
+  const isHome = !activeCat && !specialFilter && page === 'store'
 
   return (
     <>
@@ -209,8 +222,8 @@ export default function Home() {
                   <h1 className="hero-title serif">Original<br/><em>Yaponiyadan</em></h1>
                   <p className="hero-sub">Uniqlo, Nike, Shiseido va yuzlab boshqa yapon brendlari. To'g'ridan-to'g'ri, tez va ishonchli.</p>
                   <div className="hero-btns">
-                    <button className="btn-dark" onClick={()=>selectCat('Ayollar',null)}>Ayollar</button>
-                    <button className="btn-outline" onClick={()=>selectCat('Erkaklar',null)}>Erkaklar</button>
+                    <button className="btn-dark" onClick={()=>setSpecialFilter('new')}>YANGILIKLAR</button>
+                    <button className="btn-outline" onClick={()=>setSpecialFilter('sale')}>CHEGIRMALAR</button>
                   </div>
                 </section>
 
@@ -225,11 +238,9 @@ export default function Home() {
                         onMouseLeave={e=>e.currentTarget.style.background='#fff'}>
                         <div style={{fontSize:'13px',fontWeight:500,letterSpacing:'.04em',color:'#111',marginBottom:'6px',textTransform:'uppercase'}}>{cat}</div>
                         {CATEGORIES[cat].length > 0 && (
-                          <div style={{display:'flex',flexWrap:'wrap',gap:'3px',justifyContent:'center'}}>
-                            {CATEGORIES[cat].slice(0,3).map(sub => (
-                              <span key={sub} style={{fontSize:'10px',color:'#aaa'}}>{sub}{CATEGORIES[cat].indexOf(sub)<2?'·':''}</span>
-                            ))}
-                            {CATEGORIES[cat].length > 3 && <span style={{fontSize:'10px',color:'#bbb'}}>+{CATEGORIES[cat].length-3}</span>}
+                          <div style={{fontSize:'10px',color:'#aaa',lineHeight:1.6}}>
+                            {CATEGORIES[cat].slice(0,3).join(' · ')}
+                            {CATEGORIES[cat].length > 3 && <span style={{color:'#bbb'}}> +{CATEGORIES[cat].length-3}</span>}
                           </div>
                         )}
                       </div>
@@ -278,6 +289,28 @@ export default function Home() {
                   </div>
                 </div>
               </>
+            ) : specialFilter ? (
+              /* SPECIAL FILTER PAGE - Yangiliklar / Chegirmalar */
+              <div className="section">
+                <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'20px',fontSize:'12px',color:'#aaa'}}>
+                  <span onClick={goHome} style={{cursor:'pointer',color:'#888'}}>Bosh sahifa</span>
+                  <span>›</span>
+                  <span style={{color:'#111'}}>{specialFilter==='new'?'Yangiliklar':'Chegirmalar'}</span>
+                </div>
+                <div className="section-head">
+                  <span className="section-title">{specialFilter==='new'?'Yangi mahsulotlar':'Chegirmadagi mahsulotlar'} — {filtered.length} ta</span>
+                </div>
+                {loading ? (
+                  <div style={{textAlign:'center',padding:'60px',color:'#999'}}>Yuklanmoqda...</div>
+                ) : filtered.length === 0 ? (
+                  <div style={{textAlign:'center',padding:'60px',color:'#bbb'}}>
+                    <p style={{fontSize:'32px',marginBottom:'12px'}}>{specialFilter==='new'?'🆕':'🏷️'}</p>
+                    <p>Hozircha mahsulot yo'q</p>
+                  </div>
+                ) : (
+                  <div className="grid">{filtered.map(p=><ProductCard key={p.id} p={p} onAdd={addToCart} onDetail={setDetailId}/>)}</div>
+                )}
+              </div>
             ) : (
               /* CATEGORY PAGE */
               <div className="section">
