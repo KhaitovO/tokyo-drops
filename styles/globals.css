@@ -128,7 +128,10 @@ input, select, textarea { font-family: inherit; outline: none; }
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse at 70% 50%, rgba(0,0,0,.03) 0%, transparent 70%);
+  pointer-events: none;
 }
+.hero-btns { position: relative; z-index: 1; }
+.hero-eyebrow, .hero-title, .hero-sub { position: relative; z-index: 1; }
 .hero-eyebrow {
   font-size: 10px;
   letter-spacing: .22em;
