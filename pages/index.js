@@ -204,6 +204,26 @@ export default function Home() {
         </span>
       </div>
 
+      {/* STICKY CATEGORY BAR */}
+      <div style={{position:"sticky",top:"56px",zIndex:150,background:"#fff",borderBottom:"1px solid #e8e8e4",overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+        <div style={{display:"flex",minWidth:"max-content"}}>
+          {MAIN_CATS.map(cat => (
+            <div key={cat} onClick={()=>selectCat(cat,null)}
+              style={{padding:"11px 14px",cursor:"pointer",fontSize:"11px",fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",whiteSpace:"nowrap",borderBottom:"2px solid",borderBottomColor:activeCat===cat&&!specialFilter?"#111":"transparent",color:activeCat===cat&&!specialFilter?"#111":"#888",flexShrink:0}}>
+              {cat}
+            </div>
+          ))}
+          <div onClick={()=>handleSpecialFilter("new")}
+            style={{padding:"11px 14px",cursor:"pointer",fontSize:"11px",fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",whiteSpace:"nowrap",borderBottom:"2px solid",borderBottomColor:specialFilter==="new"?"#C8102E":"transparent",color:specialFilter==="new"?"#C8102E":"#888",flexShrink:0}}>
+            Yangiliklar
+          </div>
+          <div onClick={()=>handleSpecialFilter("sale")}
+            style={{padding:"11px 14px",cursor:"pointer",fontSize:"11px",fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",whiteSpace:"nowrap",borderBottom:"2px solid",borderBottomColor:specialFilter==="sale"?"#C8102E":"transparent",color:specialFilter==="sale"?"#C8102E":"#888",flexShrink:0}}>
+            Chegirmalar
+          </div>
+        </div>
+      </div>
+
       <main>
         {page === 'store' && (
           <>
@@ -232,25 +252,6 @@ export default function Home() {
                   </div>
                 </section>
 
-                {/* Category tiles */}
-                <div className="section">
-                    <div style={{display:'flex',gap:'0',borderTop:'1px solid #e8e8e4',borderLeft:'1px solid #e8e8e4',flexWrap:'wrap'}}>
-                    {MAIN_CATS.map(cat => (
-                      <div key={cat} onClick={()=>selectCat(cat,null)}
-                        style={{flex:'1 1 calc(20% - 0px)',minWidth:'100px',padding:'20px 12px',cursor:'pointer',textAlign:'center',borderRight:'1px solid #e8e8e4',borderBottom:'1px solid #e8e8e4',background:'#fff',transition:'background .15s'}}
-                        onMouseEnter={e=>e.currentTarget.style.background='#f7f7f5'}
-                        onMouseLeave={e=>e.currentTarget.style.background='#fff'}>
-                        <div style={{fontSize:'13px',fontWeight:500,letterSpacing:'.04em',color:'#111',marginBottom:'6px',textTransform:'uppercase'}}>{cat}</div>
-                        {CATEGORIES[cat].length > 0 && (
-                          <div style={{fontSize:'10px',color:'#aaa',lineHeight:1.6}}>
-                            {CATEGORIES[cat].slice(0,3).join(' · ')}
-                            {CATEGORIES[cat].length > 3 && <span style={{color:'#bbb'}}> +{CATEGORIES[cat].length-3}</span>}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
 
                 {newArrivals.length > 0 && (
                   <div className="section">
