@@ -239,8 +239,8 @@ export default function Home() {
         </span>
       </div>
 
-      {/* STICKY CATEGORY BAR */}
-      <div style={{position:"sticky",top:"56px",zIndex:150,background:"#fff",borderBottom:"1px solid #e8e8e4",overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
+      {/* STICKY CATEGORY BAR - only on mobile */}
+      <div className="mobile-cat-bar" style={{position:"sticky",top:"56px",zIndex:150,background:"#fff",borderBottom:"1px solid #e8e8e4",overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
         <div style={{display:"flex",minWidth:"max-content",maxWidth:"1200px",margin:"0 auto",padding:"0 24px"}}>
           {MAIN_CATS.map(cat => (
             <div key={cat} onClick={()=>selectCat(cat,null)}

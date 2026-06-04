@@ -454,3 +454,9 @@ input, select, textarea { font-family: inherit; outline: none; }
   .footer-inner { grid-template-columns: 1fr; }
   .stats { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Sticky category bar - desktop da yashirin, mobilda ko'rinadi */
+.mobile-cat-bar { display: none; }
+@media (max-width: 900px) {
+  .mobile-cat-bar { display: block; }
+}
