@@ -3,7 +3,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { customer_name, phone, address, total, items } = req.body
+  const { customer_name, phone, telegram, address, total, items } = req.body
 
   if (!phone || !total || !items) {
     return res.status(400).json({ error: 'Missing required fields' })
@@ -16,10 +16,18 @@ export default async function handler(req, res) {
     `  • ${i.name}${i.color ? ` (${i.color})` : ''}${i.size ? ` / ${i.size}` : ''} × ${i.qty} = ${(i.price * i.qty).toLocaleString('uz-UZ')} so'm`
   ).join('\n')
 
+  // Format telegram link
+  const telegramDisplay = telegram
+    ? telegram.startsWith('@')
+      ? `<a href="https://t.me/${telegram.slice(1)}">${telegram}</a>`
+      : telegram
+    : "Ko'rsatilmagan"
+
   const message = `🛍 <b>YANGI BUYURTMA!</b>
 
 👤 <b>Mijoz:</b> ${customer_name || "Noma'lum"}
 📞 <b>Telefon:</b> ${phone}
+💬 <b>Telegram:</b> ${telegramDisplay}
 📍 <b>Manzil:</b> ${address || "Ko'rsatilmagan"}
 
 🧾 <b>Buyurtma:</b>
@@ -39,6 +47,7 @@ ${itemsList}
           chat_id: CHAT_ID,
           text: message,
           parse_mode: 'HTML',
+          disable_web_page_preview: true,
         }),
       }
     )

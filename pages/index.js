@@ -24,7 +24,7 @@ export default function Home() {
   const [mobileNav, setMobileNav] = useState(false)
   const [notif, setNotif] = useState(null)
   const [orderForm, setOrderForm] = useState(false)
-  const [orderData, setOrderData] = useState({name:'',phone:'',address:''})
+  const [orderData, setOrderData] = useState({name:'',phone:'',telegram:'',address:''})
   const [dropdownOpen, setDropdownOpen] = useState(null)
   const [specialFilter, setSpecialFilter] = useState(null) // 'new' | 'sale' | null
 
@@ -107,6 +107,7 @@ export default function Home() {
 
   async function submitOrder() {
     if (!orderData.phone) { notify('Telefon raqam majburiy!'); return }
+    if (!orderData.telegram) { notify('Telegram username majburiy!'); return }
 
     const orderItems = cart.map(i => ({
       id: i.id,
@@ -121,6 +122,7 @@ export default function Home() {
     const { error } = await supabase.from('orders').insert([{
       customer_name: orderData.name,
       phone: orderData.phone,
+      telegram: orderData.telegram,
       address: orderData.address,
       total: cartTotal,
       items: orderItems,
@@ -137,6 +139,7 @@ export default function Home() {
         body: JSON.stringify({
           customer_name: orderData.name,
           phone: orderData.phone,
+          telegram: orderData.telegram,
           address: orderData.address,
           total: cartTotal,
           items: orderItems,
@@ -149,7 +152,7 @@ export default function Home() {
     setCart([])
     setOrderForm(false)
     setCartOpen(false)
-    setOrderData({ name: '', phone: '', address: '' })
+    setOrderData({ name: '', phone: '', telegram: '', address: '' })
     notify('Buyurtma qabul qilindi! ✓')
   }
 
@@ -506,11 +509,21 @@ export default function Home() {
             <input type="tel" placeholder="+998 90 000 00 00" value={orderData.phone} onChange={e=>setOrderData(d=>({...d,phone:e.target.value}))}/>
           </div>
           <div className="field">
+            <label>Telegram username *</label>
+            <input type="text" placeholder="@username yoki +998901234567" value={orderData.telegram} onChange={e=>setOrderData(d=>({...d,telegram:e.target.value}))}/>
+            <p style={{fontSize:'11px',color:'#aaa',marginTop:'4px'}}>Siz bilan bog'lanish uchun kerak</p>
+          </div>
+          <div className="field">
             <label>Manzil</label>
             <input type="text" placeholder="Toshkent, Chilonzor..." value={orderData.address} onChange={e=>setOrderData(d=>({...d,address:e.target.value}))}/>
           </div>
           <div style={{background:'#f7f7f5',padding:'14px',marginBottom:'16px'}}>
             <div style={{fontSize:'12px',color:'#888',marginBottom:'8px'}}>Buyurtma:</div>
+            {orderData.telegram && (
+              <div style={{fontSize:'12px',color:'#888',marginBottom:'6px'}}>
+                Telegram: <span style={{color:'#111',fontWeight:500}}>{orderData.telegram}</span>
+              </div>
+            )}
             {cart.map(i=>(
               <div key={i.cartKey} style={{display:'flex',justifyContent:'space-between',fontSize:'13px',marginBottom:'4px'}}>
                 <span>{i.name}{i.selectedColor?` · ${i.selectedColor}`:''}{i.selectedSize?` (${i.selectedSize})`:''} x{i.qty}</span>
