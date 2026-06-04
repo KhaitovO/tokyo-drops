@@ -126,8 +126,8 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>TOKYO Drops — Yaponiyadan O'zbekistonga</title>
-        <meta name="description" content="Yaponiyaning original brendlari — Uniqlo, Nike, Shiseido va boshqalar." />
+        <title>TOKYO Brands — Yaponiyadan O'zbekistonga</title>
+        <meta name="description" content="Hammasi Yaponiyadan — Uniqlo, Nike, Shiseido va yuzlab original brendlar." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
@@ -159,7 +159,7 @@ export default function Home() {
       {/* HEADER */}
       <header className="header">
         <div className="header-inner">
-          <div className="logo serif" onClick={goHome}>TOKYO <em>Drops</em></div>
+          <div className="logo serif" onClick={goHome}>TOKYO <em>Brands</em></div>
 
           {/* Desktop nav with dropdowns */}
           <nav className="nav" style={{gap:'20px'}}>
@@ -222,7 +222,7 @@ export default function Home() {
               <>
                 <section className="hero">
                   <p className="hero-eyebrow">Yaponiyadan — O'zbekistonga</p>
-                  <h1 className="hero-title serif">Original<br/><em>Yaponiyadan</em></h1>
+                  <h1 className="hero-title serif">Hammasi<br/><em>Yaponiyadan</em></h1>
                   <p className="hero-sub">Uniqlo, Nike, Shiseido va yuzlab boshqa yapon brendlari. To'g'ridan-to'g'ri, tez va ishonchli.</p>
                   <div className="hero-btns">
                     <button
@@ -396,7 +396,7 @@ export default function Home() {
       <footer className="footer">
         <div className="footer-inner">
           <div>
-            <div className="footer-brand serif">TOKYO <em>Drops</em></div>
+            <div className="footer-brand serif">TOKYO <em>Brands</em></div>
             <div className="footer-desc">Yaponiyaning eng yaxshi brendlari — to'g'ridan-to'g'ri sizga.</div>
           </div>
           <div className="footer-col">
@@ -413,7 +413,7 @@ export default function Home() {
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© 2025 TOKYO Drops. Barcha huquqlar himoyalangan.</span>
+          <span>© 2025 TOKYO Brands. Barcha huquqlar himoyalangan.</span>
           <span>Toshkent, O'zbekiston</span>
         </div>
       </footer>

@@ -224,12 +224,12 @@ export default function Admin() {
 
   return (
     <>
-      <Head><title>Admin — TOKYO Drops</title></Head>
+      <Head><title>Admin — TOKYO Brands</title></Head>
       {notif && <div className="notif show">{notif}</div>}
 
       <header className="header">
         <div className="header-inner">
-          <div className="logo serif">TOKYO <em>Drops</em>
+          <div className="logo serif">TOKYO <em>Brands</em>
             <span style={{fontSize:'11px',color:'#999',fontFamily:'DM Sans',fontStyle:'normal',marginLeft:'8px'}}>Admin</span>
           </div>
           <Link href="/" style={{fontSize:'12px',color:'#888',letterSpacing:'.06em'}}>← Do'konga qayt</Link>
