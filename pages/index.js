@@ -133,28 +133,18 @@ export default function Home() {
 
       {notif && <div className="notif show">{notif}</div>}
 
-      {/* MOBILE NAV */}
-      <div className={`mobile-nav${mobileNav?' open':''}`}>
-        <button className="mobile-nav-close" onClick={()=>setMobileNav(false)}>×</button>
-        <a onClick={goHome} style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'28px',fontWeight:300}}>Bosh sahifa</a>
-        {MAIN_CATS.map(cat => (
-          <div key={cat}>
-            <a style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'24px',fontWeight:400,color:'#111',padding:'10px 0',borderBottom:'1px solid #f0f0f0',display:'block',cursor:'pointer'}}
-              onClick={()=>selectCat(cat, null)}>{cat}</a>
-            {CATEGORIES[cat].length > 0 && (
-              <div style={{paddingLeft:'16px'}}>
-                {CATEGORIES[cat].map(sub => (
-                  <a key={sub} onClick={()=>selectCat(cat,sub)}
-                    style={{fontSize:'14px',color:'#777',padding:'6px 0',display:'block',cursor:'pointer',borderBottom:'1px solid #f8f8f8'}}>
-                    {sub}
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
-        <a onClick={()=>{setPage('news');setMobileNav(false)}} style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'24px',fontWeight:400}}>Yangiliklar</a>
-      </div>
+      {/* MOBILE NAV - Accordion */}
+      <MobileNav
+        open={mobileNav}
+        onClose={()=>setMobileNav(false)}
+        onSelectCat={selectCat}
+        onHome={goHome}
+        onNews={()=>{setPage('news');setMobileNav(false)}}
+        activeCat={activeCat}
+        activeSubCat={activeSubCat}
+        specialFilter={specialFilter}
+        handleSpecialFilter={handleSpecialFilter}
+      />
 
       {/* HEADER */}
       <header className="header">
@@ -515,6 +505,130 @@ export default function Home() {
     </>
   )
 }
+
+function MobileNav({ open, onClose, onSelectCat, onHome, onNews, activeCat, activeSubCat, specialFilter, handleSpecialFilter }) {
+  const [expandedCat, setExpandedCat] = useState(null)
+
+  function toggleCat(cat) {
+    setExpandedCat(prev => prev === cat ? null : cat)
+  }
+
+  // Prevent body scroll when open
+  React.useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+      setExpandedCat(null)
+    }
+    return () => { document.body.style.overflow = '' }
+  }, [open])
+
+  return (
+    <>
+      {/* Overlay */}
+      {open && (
+        <div onClick={onClose}
+          style={{position:'fixed',inset:0,background:'rgba(0,0,0,.4)',zIndex:290}}/>
+      )}
+
+      {/* Drawer */}
+      <div style={{
+        position:'fixed',left:0,top:0,bottom:0,
+        width:'min(300px,85vw)',
+        background:'#fff',
+        zIndex:300,
+        transform:open?'translateX(0)':'translateX(-100%)',
+        transition:'transform .3s ease',
+        display:'flex',
+        flexDirection:'column',
+        overflowY:'auto',
+        WebkitOverflowScrolling:'touch',
+      }}>
+        {/* Header */}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'18px 20px',borderBottom:'1px solid #f0f0f0',flexShrink:0}}>
+          <span style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'18px',fontWeight:400,letterSpacing:'.04em'}}>TOKYO <em>Brands</em></span>
+          <button onClick={onClose} style={{background:'none',border:'none',fontSize:'24px',color:'#aaa',cursor:'pointer',lineHeight:1,padding:'4px'}}>×</button>
+        </div>
+
+        {/* Nav items */}
+        <div style={{flex:1,overflowY:'auto',WebkitOverflowScrolling:'touch'}}>
+
+          {/* Home */}
+          <div onClick={()=>{onHome();onClose()}}
+            style={{padding:'14px 20px',fontSize:'13px',fontWeight:500,letterSpacing:'.06em',textTransform:'uppercase',cursor:'pointer',borderBottom:'1px solid #f5f5f5',color:'#111'}}>
+            Bosh sahifa
+          </div>
+
+          {/* Yangiliklar */}
+          <div onClick={()=>handleSpecialFilter('new')}
+            style={{padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:'13px',fontWeight:500,letterSpacing:'.06em',textTransform:'uppercase',cursor:'pointer',borderBottom:'1px solid #f5f5f5',background:specialFilter==='new'?'#111':'transparent',color:specialFilter==='new'?'#fff':'#111'}}>
+            Yangiliklar
+          </div>
+
+          {/* Chegirmalar */}
+          <div onClick={()=>handleSpecialFilter('sale')}
+            style={{padding:'14px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:'13px',fontWeight:500,letterSpacing:'.06em',textTransform:'uppercase',cursor:'pointer',borderBottom:'1px solid #f5f5f5',background:specialFilter==='sale'?'#111':'transparent',color:specialFilter==='sale'?'#fff':'#111'}}>
+            Chegirmalar
+          </div>
+
+          {/* Main categories */}
+          {MAIN_CATS.map(cat => (
+            <div key={cat}>
+              {/* Category row */}
+              <div
+                onClick={()=> CATEGORIES[cat].length > 0 ? toggleCat(cat) : onSelectCat(cat, null)}
+                style={{
+                  padding:'14px 20px',
+                  display:'flex',
+                  justifyContent:'space-between',
+                  alignItems:'center',
+                  fontSize:'13px',
+                  fontWeight:500,
+                  letterSpacing:'.06em',
+                  textTransform:'uppercase',
+                  cursor:'pointer',
+                  borderBottom:'1px solid #f5f5f5',
+                  background: activeCat===cat && !activeSubCat ? '#111' : 'transparent',
+                  color: activeCat===cat && !activeSubCat ? '#fff' : '#111',
+                  transition:'background .2s',
+                }}>
+                <span>{cat}</span>
+                {CATEGORIES[cat].length > 0 && (
+                  <span style={{fontSize:'11px',color:activeCat===cat&&!activeSubCat?'rgba(255,255,255,.6)':'#bbb',transition:'transform .2s',display:'inline-block',transform:expandedCat===cat?'rotate(90deg)':'rotate(0deg)'}}>›</span>
+                )}
+              </div>
+
+              {/* Sub categories - accordion */}
+              {CATEGORIES[cat].length > 0 && expandedCat === cat && (
+                <div style={{background:'#fafaf8',borderBottom:'1px solid #f0f0f0'}}>
+                  {/* All in category */}
+                  <div onClick={()=>onSelectCat(cat, null)}
+                    style={{padding:'10px 20px 10px 32px',fontSize:'12px',cursor:'pointer',letterSpacing:'.04em',background:activeCat===cat&&!activeSubCat?'#111':'transparent',color:activeCat===cat&&!activeSubCat?'#fff':'#666',borderBottom:'1px solid #f0f0f0'}}>
+                    Barchasi
+                  </div>
+                  {CATEGORIES[cat].map(sub => (
+                    <div key={sub} onClick={()=>onSelectCat(cat, sub)}
+                      style={{padding:'10px 20px 10px 32px',fontSize:'12px',cursor:'pointer',letterSpacing:'.04em',background:activeCat===cat&&activeSubCat===sub?'#111':'transparent',color:activeCat===cat&&activeSubCat===sub?'#fff':'#666',borderBottom:'1px solid #f0f0f0',transition:'background .15s'}}>
+                      {sub}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Yangiliklar page */}
+          <div onClick={onNews}
+            style={{padding:'14px 20px',fontSize:'13px',fontWeight:500,letterSpacing:'.06em',textTransform:'uppercase',cursor:'pointer',borderBottom:'1px solid #f5f5f5',color:'#111'}}>
+            Yangiliklar
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 
 function DetailModal({ detail, onClose, onAdd }) {
   const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
