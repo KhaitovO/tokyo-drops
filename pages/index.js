@@ -107,18 +107,50 @@ export default function Home() {
 
   async function submitOrder() {
     if (!orderData.phone) { notify('Telefon raqam majburiy!'); return }
+
+    const orderItems = cart.map(i => ({
+      id: i.id,
+      name: i.name,
+      price: i.price,
+      qty: i.qty,
+      size: i.selectedSize,
+      color: i.selectedColor
+    }))
+
+    // 1. Save to Supabase
     const { error } = await supabase.from('orders').insert([{
       customer_name: orderData.name,
       phone: orderData.phone,
       address: orderData.address,
       total: cartTotal,
-      items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, size: i.selectedSize, color: i.selectedColor })),
+      items: orderItems,
       status: 'new'
     }])
-    if (!error) {
-      setCart([]); setOrderForm(false); setCartOpen(false)
-      notify('Buyurtma qabul qilindi! ✓')
-    } else notify('Xato: ' + error.message)
+
+    if (error) { notify('Xato: ' + error.message); return }
+
+    // 2. Send Telegram notification
+    try {
+      await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_name: orderData.name,
+          phone: orderData.phone,
+          address: orderData.address,
+          total: cartTotal,
+          items: orderItems,
+        })
+      })
+    } catch (e) {
+      console.error('Telegram notification failed:', e)
+    }
+
+    setCart([])
+    setOrderForm(false)
+    setCartOpen(false)
+    setOrderData({ name: '', phone: '', address: '' })
+    notify('Buyurtma qabul qilindi! ✓')
   }
 
   const isHome = !activeCat && !specialFilter && page === 'store'
