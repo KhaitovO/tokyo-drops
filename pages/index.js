@@ -87,16 +87,19 @@ export default function Home() {
     window.scrollTo(0, 0)
   }
 
-  function addToCart(id, size) {
+  function addToCart(id, size, color) {
     const p = products.find(x => x.id === id)
     if (!p) return
-    const cartKey = size ? `${id}-${size}` : String(id)
+    const cartKey = `${id}-${size||''}-${color||''}`
     setCart(prev => {
       const ex = prev.find(x => x.cartKey === cartKey)
       if (ex) return prev.map(x => x.cartKey === cartKey ? { ...x, qty: x.qty + 1 } : x)
-      return [...prev, { ...p, qty: 1, cartKey, selectedSize: size || null }]
+      // Get color image for cart display
+      const colorObj = p.colors?.find(c => c.name === color)
+      const cartImg = colorObj?.images?.[0] || p.img || ''
+      return [...prev, { ...p, img: cartImg, qty: 1, cartKey, selectedSize: size || null, selectedColor: color || null }]
     })
-    notify("Savatga qo'shildi ✓" + (size ? ` (${size})` : ''))
+    notify("Savatga qo'shildi ✓" + (size ? ` (${size})` : '') + (color ? ` · ${color}` : ''))
   }
 
   function removeFromCart(cartKey) { setCart(c => c.filter(x => x.cartKey !== cartKey)) }
@@ -109,7 +112,7 @@ export default function Home() {
       phone: orderData.phone,
       address: orderData.address,
       total: cartTotal,
-      items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, size: i.selectedSize })),
+      items: cart.map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, size: i.selectedSize, color: i.selectedColor })),
       status: 'new'
     }])
     if (!error) {
@@ -430,6 +433,16 @@ export default function Home() {
               <img className="cart-item-img" src={item.img||'https://images.unsplash.com/photo-1523381294911-8d3cead13475?w=120'} alt={item.name}/>
               <div className="cart-item-info">
                 <div className="cart-item-name">{item.name}</div>
+                {item.selectedColor && (
+                  <div style={{fontSize:'11px',color:'#888',marginBottom:'2px',display:'flex',alignItems:'center',gap:'5px'}}>
+                    Rang:
+                    {(() => {
+                      const colorObj = item.colors?.find(c => c.name === item.selectedColor)
+                      return colorObj ? <span style={{width:10,height:10,borderRadius:'50%',background:colorObj.hex,border:'1px solid #ddd',display:'inline-block'}}/> : null
+                    })()}
+                    <b style={{color:'#111'}}>{item.selectedColor}</b>
+                  </div>
+                )}
                 {item.selectedSize && (
                   <div style={{fontSize:'11px',color:'#888',marginBottom:'2px'}}>O'lcham: <b style={{color:'#111'}}>{item.selectedSize}</b></div>
                 )}
@@ -478,7 +491,7 @@ export default function Home() {
             <div style={{fontSize:'12px',color:'#888',marginBottom:'8px'}}>Buyurtma:</div>
             {cart.map(i=>(
               <div key={i.cartKey} style={{display:'flex',justifyContent:'space-between',fontSize:'13px',marginBottom:'4px'}}>
-                <span>{i.name}{i.selectedSize?` (${i.selectedSize})`:''} x{i.qty}</span>
+                <span>{i.name}{i.selectedColor?` · ${i.selectedColor}`:''}{i.selectedSize?` (${i.selectedSize})`:''} x{i.qty}</span>
                 <span>{fmt(i.price*i.qty)}</span>
               </div>
             ))}
@@ -505,14 +518,27 @@ export default function Home() {
 
 function DetailModal({ detail, onClose, onAdd }) {
   const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
-  const images = detail.images?.length > 0 ? detail.images : (detail.img ? [detail.img] : [])
+  const colors = detail.colors || []
+  const hasColors = colors.length > 0
+  const [activeColorIdx, setActiveColorIdx] = useState(0)
+  const activeColor = hasColors ? colors[activeColorIdx] : null
+  const images = hasColors
+    ? (activeColor?.images?.length > 0 ? activeColor.images : (detail.img ? [detail.img] : []))
+    : (detail.images?.length > 0 ? detail.images : (detail.img ? [detail.img] : []))
   const [activeImg, setActiveImg] = useState(0)
   const [selectedSize, setSelectedSize] = useState(null)
+  const [selectedColor, setSelectedColor] = useState(hasColors ? colors[0]?.name : null)
   const [zoom, setZoom] = useState(false)
   const [zoomPos, setZoomPos] = useState({x:50,y:50})
   const [fullscreen, setFullscreen] = useState(false)
   const fsRef = useRef()
   const swipeRef = useRef(null)
+
+  function selectColor(idx) {
+    setActiveColorIdx(idx)
+    setSelectedColor(colors[idx]?.name)
+    setActiveImg(0)
+  }
 
   function prev() { setActiveImg(i => (i-1+images.length)%images.length) }
   function next() { setActiveImg(i => (i+1)%images.length) }
@@ -587,6 +613,25 @@ function DetailModal({ detail, onClose, onAdd }) {
             <span className="modal-price">{fmt(detail.price)}</span>
             {detail.old_price && <span className="modal-old">{fmt(detail.old_price)}</span>}
           </div>
+          {/* COLOR SWATCHES */}
+          {hasColors && colors.length > 0 && (
+            <div style={{marginBottom:'18px'}}>
+              <p style={{fontSize:'11px',color:'#aaa',letterSpacing:'.07em',textTransform:'uppercase',marginBottom:'10px'}}>
+                Rang: <span style={{color:'#111',fontWeight:500}}>{selectedColor}</span>
+              </p>
+              <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
+                {colors.map((c,i) => (
+                  <div key={i} title={c.name} onClick={()=>selectColor(i)}
+                    style={{width:28,height:28,borderRadius:'50%',background:c.hex,cursor:'pointer',
+                      border:activeColorIdx===i?'2px solid #111':'2px solid transparent',
+                      outline:activeColorIdx===i?'1px solid #111':'1px solid #ddd',
+                      outlineOffset:'2px',
+                      transition:'all .15s'}}/>
+                ))}
+              </div>
+            </div>
+          )}
+
           {detail.sizes?.length>0 && (
             <>
               <div className="sizes-lbl">O'lchamni tanlang</div>
@@ -621,7 +666,7 @@ function DetailModal({ detail, onClose, onAdd }) {
             style={{width:'100%',padding:'14px',fontSize:'11px',letterSpacing:'.1em',opacity:(detail.sizes?.length>0&&!selectedSize)?0.6:1}}
             onClick={()=>{
               if (detail.sizes?.length>0 && !selectedSize) return
-              onAdd(detail.id, selectedSize)
+              onAdd(detail.id, selectedSize, selectedColor)
               onClose()
             }}>
             SAVATGA QO'SHISH {selectedSize?`— ${selectedSize}`:''}
@@ -665,7 +710,11 @@ function DetailModal({ detail, onClose, onAdd }) {
 
 function ProductCard({ p, onAdd, onDetail }) {
   const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
-  const images = p.images?.length>0 ? p.images : (p.img?[p.img]:[])
+  const colors = p.colors || []
+  const [activeCardColorIdx, setActiveCardColorIdx] = useState(0)
+  const images = colors.length > 0
+    ? (colors[activeCardColorIdx]?.images?.length > 0 ? colors[activeCardColorIdx].images : (p.img?[p.img]:[]))
+    : (p.images?.length>0 ? p.images : (p.img?[p.img]:[]))
   const [imgIdx, setImgIdx] = useState(0)
   return (
     <div className="pcard" onClick={()=>onDetail(p.id)}>
@@ -693,6 +742,15 @@ function ProductCard({ p, onAdd, onDetail }) {
       </div>
       <div className="pcard-cat">{p.main_cat}{p.sub_cat?` · ${p.sub_cat}`:''}</div>
       <div className="pcard-name">{p.name}</div>
+      {p.colors?.length > 0 && (
+        <div style={{display:'flex',gap:'5px',marginBottom:'6px',flexWrap:'wrap'}}>
+          {p.colors.map((c,i) => (
+            <div key={i} title={c.name}
+              style={{width:14,height:14,borderRadius:'50%',background:c.hex,border:'1.5px solid',borderColor:imgIdx===0&&i===0?'#111':'#ddd',cursor:'pointer',transition:'border-color .15s'}}
+              onClick={e=>{e.stopPropagation();setImgIdx(0);}}/>
+          ))}
+        </div>
+      )}
       <div className="pcard-prices">
         <span className="price-now">{fmt(p.price)}</span>
         {p.old_price && <span className="price-old">{fmt(p.old_price)}</span>}
