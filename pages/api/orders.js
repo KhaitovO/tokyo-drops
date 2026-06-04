@@ -12,16 +12,17 @@ export default async function handler(req, res) {
   const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
   const CHAT_ID = process.env.TELEGRAM_CHAT_ID
 
-  const itemsList = items.map(i =>
-    `  • ${i.name}${i.color ? ` (${i.color})` : ''}${i.size ? ` / ${i.size}` : ''} × ${i.qty} = ${(i.price * i.qty).toLocaleString('uz-UZ')} so'm`
+  const itemsList = items.map((i, idx) =>
+    `  ${idx + 1}. ${i.name}${i.color ? ` (${i.color})` : ''}${i.size ? ` / ${i.size}` : ''} x ${i.qty} = ${(i.price * i.qty).toLocaleString('uz-UZ')} so'm`
   ).join('\n')
 
-  // Format telegram link
   const telegramDisplay = telegram
     ? telegram.startsWith('@')
       ? `<a href="https://t.me/${telegram.slice(1)}">${telegram}</a>`
       : telegram
     : "Ko'rsatilmagan"
+
+  const totalItems = items.reduce((s, i) => s + i.qty, 0)
 
   const message = `🛍 <b>YANGI BUYURTMA!</b>
 
@@ -30,7 +31,7 @@ export default async function handler(req, res) {
 💬 <b>Telegram:</b> ${telegramDisplay}
 📍 <b>Manzil:</b> ${address || "Ko'rsatilmagan"}
 
-🧾 <b>Buyurtma:</b>
+🧾 <b>Buyurtma (${totalItems} ta mahsulot):</b>
 ${itemsList}
 
 💰 <b>Jami: ${Number(total).toLocaleString('uz-UZ')} so'm</b>
