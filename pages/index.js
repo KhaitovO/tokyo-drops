@@ -234,8 +234,7 @@ export default function Home() {
 
                 {/* Category tiles */}
                 <div className="section">
-                  <div className="section-head"><span className="section-title">Kategoriyalar</span></div>
-                  <div style={{display:'flex',gap:'0',borderTop:'1px solid #e8e8e4',borderLeft:'1px solid #e8e8e4',flexWrap:'wrap'}}>
+                    <div style={{display:'flex',gap:'0',borderTop:'1px solid #e8e8e4',borderLeft:'1px solid #e8e8e4',flexWrap:'wrap'}}>
                     {MAIN_CATS.map(cat => (
                       <div key={cat} onClick={()=>selectCat(cat,null)}
                         style={{flex:'1 1 calc(20% - 0px)',minWidth:'100px',padding:'20px 12px',cursor:'pointer',textAlign:'center',borderRight:'1px solid #e8e8e4',borderBottom:'1px solid #e8e8e4',background:'#fff',transition:'background .15s'}}
