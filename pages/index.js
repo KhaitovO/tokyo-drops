@@ -241,7 +241,7 @@ export default function Home() {
 
       {/* STICKY CATEGORY BAR */}
       <div style={{position:"sticky",top:"56px",zIndex:150,background:"#fff",borderBottom:"1px solid #e8e8e4",overflowX:"auto",scrollbarWidth:"none",WebkitOverflowScrolling:"touch"}}>
-        <div style={{display:"flex",minWidth:"max-content"}}>
+        <div style={{display:"flex",minWidth:"max-content",maxWidth:"1200px",margin:"0 auto",padding:"0 24px"}}>
           {MAIN_CATS.map(cat => (
             <div key={cat} onClick={()=>selectCat(cat,null)}
               style={{padding:"11px 14px",cursor:"pointer",fontSize:"11px",fontWeight:600,letterSpacing:".07em",textTransform:"uppercase",whiteSpace:"nowrap",borderBottom:"2px solid",borderBottomColor:activeCat===cat&&!specialFilter?"#111":"transparent",color:activeCat===cat&&!specialFilter?"#111":"#888",flexShrink:0}}>
