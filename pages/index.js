@@ -476,7 +476,10 @@ export default function Home() {
                   <button className="qty-btn" onClick={()=>changeQty(item.cartKey,-1)}>−</button>
                   <span className="qty-num">{item.qty}</span>
                   <button className="qty-btn" onClick={()=>changeQty(item.cartKey,1)}>+</button>
-                  <button className="rm-btn" onClick={()=>removeFromCart(item.cartKey)}>O'chir</button>
+                  <button className="rm-btn" onClick={()=>removeFromCart(item.cartKey)}
+  style={{marginLeft:'auto',background:'none',border:'none',cursor:'pointer',padding:'4px',color:'#888',fontSize:'18px',lineHeight:1}}>
+  🗑
+</button>
                 </div>
               </div>
             </div>
@@ -808,7 +811,8 @@ function DetailModal({ detail, onClose, onAdd }) {
               style={{width:'100%',height:'100%',maxHeight:'70vh',objectFit:'cover',display:'block',
                 transition:'transform .1s ease',
                 transformOrigin:`${zoomPos.x}% ${zoomPos.y}%`,
-                transform:zoom?'scale(2.2)':'scale(1)'}}/>
+                transform:zoom?'scale(2.2)':'scale(1)',
+                touchAction:'pinch-zoom'}}/>
             {!zoom && displayImages.length > 1 && (
               <div style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',display:'flex',gap:'4px',pointerEvents:'none'}}>
                 {displayImages.map((_,i)=>(

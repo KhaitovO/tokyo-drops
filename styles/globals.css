@@ -282,7 +282,7 @@ input, select, textarea { font-family: inherit; outline: none; }
 .qty-row { display: flex; align-items: center; gap: 10px; }
 .qty-btn { width: 26px; height: 26px; border: 1px solid var(--border); background: none; font-size: 16px; display: flex; align-items: center; justify-content: center; }
 .qty-num { font-size: 13px; font-weight: 500; min-width: 18px; text-align: center; }
-.rm-btn { margin-left: auto; font-size: 11px; color: #ccc; background: none; border: none; }
+.rm-btn { margin-left: auto; font-size: 18px; color: #888; background: none; border: none; cursor: pointer; padding: 4px; line-height: 1; }
 .cart-total-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .cart-total-label { font-size: 13px; color: var(--gray); }
 .cart-total-amount { font-size: 20px; font-weight: 500; }
@@ -309,6 +309,19 @@ input, select, textarea { font-family: inherit; outline: none; }
   display: grid;
   grid-template-columns: 1fr 1fr;
   position: relative;
+}
+@media (max-width: 600px) {
+  .modal {
+    grid-template-columns: 1fr !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+  .modal-bg {
+    padding: 0 !important;
+    align-items: flex-start !important;
+  }
 }
 .modal-body {
   overflow-y: auto;
