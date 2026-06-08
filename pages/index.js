@@ -569,8 +569,10 @@ export default function Home() {
 
       {/* DETAIL MODAL */}
       <div className={`modal-bg${detail?' show':''}`} onClick={()=>setDetailId(null)}
-        style={{overflowY:detail?'auto':'hidden'}}
-        onTouchMove={e=>e.stopPropagation()}>
+        style={{
+          overflowY: detail ? 'auto' : 'hidden',
+          WebkitOverflowScrolling: 'touch',
+        }}>
         {detail && <DetailModal detail={detail} onClose={()=>setDetailId(null)} onAdd={addToCart}/>}
       </div>
     </>
@@ -716,9 +718,10 @@ function DetailModal({ detail, onClose, onAdd }) {
   const [activeImg, setActiveImg] = useState(0)
   const [selectedSize, setSelectedSize] = useState(null)
   const [selectedColor, setSelectedColor] = useState(null)
-  // FIX 5: zoom only on hover, not auto
+  // Zoom - desktop only, never auto
   const [zoom, setZoom] = useState(false)
   const [zoomPos, setZoomPos] = useState({x:50,y:50})
+  const isDesktop = typeof window !== 'undefined' && window.matchMedia('(pointer:fine)').matches
   const [fullscreen, setFullscreen] = useState(false)
   const fsRef = useRef()
   const modalImgRef = useRef()
@@ -813,9 +816,9 @@ function DetailModal({ detail, onClose, onAdd }) {
                 transform:zoom?'scale(2.2)':'scale(1)',
                 touchAction:'pinch-zoom',
                 userSelect:'none'}}
-              onMouseEnter={()=>setZoom(true)}
+              onMouseEnter={()=>{ if(isDesktop) setZoom(true) }}
               onMouseLeave={()=>setZoom(false)}
-              onMouseMove={handleMouseMove}
+              onMouseMove={e=>{ if(isDesktop) handleMouseMove(e) }}
             />
             {displayImages.length > 1 && (
               <div style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',display:'flex',gap:'4px',pointerEvents:'none'}}>
