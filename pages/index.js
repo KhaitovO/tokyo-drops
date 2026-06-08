@@ -802,18 +802,22 @@ function DetailModal({ detail, onClose, onAdd }) {
     <>
       <div className="modal" onClick={e=>e.stopPropagation()}>
         <div style={{position:'relative',background:'#f5f5f3',overflow:'hidden',display:'flex',flexDirection:'column'}}>
-          {/* FIX 5: No auto-zoom, zoom only on mouse hover (desktop) */}
+          {/* Image area - no auto-zoom, desktop hover zoom, mobile pinch on image only */}
           <div ref={modalImgRef}
-            style={{position:'relative',flex:1,overflow:'hidden',cursor:zoom?'crosshair':'default',minHeight:0}}
-            onMouseEnter={()=>setZoom(true)} onMouseLeave={()=>setZoom(false)}
-            onMouseMove={handleMouseMove}>
+            style={{position:'relative',flex:1,overflow:'hidden',minHeight:0,
+              background:'#f5f5f3'}}>
             <img src={displayImages[activeImg] || images[0]} alt={detail.name}
               style={{width:'100%',height:'100%',maxHeight:'70vh',objectFit:'cover',display:'block',
-                transition:'transform .1s ease',
+                transition:zoom?'transform .1s ease':'none',
                 transformOrigin:`${zoomPos.x}% ${zoomPos.y}%`,
                 transform:zoom?'scale(2.2)':'scale(1)',
-                touchAction:'pinch-zoom'}}/>
-            {!zoom && displayImages.length > 1 && (
+                touchAction:'pinch-zoom',
+                userSelect:'none'}}
+              onMouseEnter={()=>setZoom(true)}
+              onMouseLeave={()=>setZoom(false)}
+              onMouseMove={handleMouseMove}
+            />
+            {displayImages.length > 1 && (
               <div style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',display:'flex',gap:'4px',pointerEvents:'none'}}>
                 {displayImages.map((_,i)=>(
                   <span key={i} style={{width:i===activeImg?14:5,height:5,borderRadius:'3px',background:i===activeImg?'#fff':'rgba(255,255,255,.6)',display:'block',transition:'all .2s'}}/>
