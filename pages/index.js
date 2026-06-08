@@ -321,7 +321,7 @@ export default function Home() {
                     {[
                       {icon:'🇯🇵',t:'100% Original',s:"Yaponiyadan to'g'ridan-to'g'ri"},
                       {icon:'⚡',t:'10–14 kun',s:'Tez yetkazib berish'},
-                      {icon:'💳',t:'Payme · Click',s:"Qulay to'lov usullari"},
+                      {icon:'💳',t:'Karta orqali',s:"Tez va qulay to'lov"},
                       {icon:'✅',t:'3+ yillik tajriba',s:'1000+ mamnun mijoz'},
                     ].map(f=>(
                       <div key={f.t}><div className="feat-icon">{f.icon}</div><div className="feat-title">{f.t}</div><div className="feat-sub">{f.s}</div></div>
@@ -491,7 +491,7 @@ export default function Home() {
             <button className="btn-dark" style={{width:'100%',padding:'14px',fontSize:'11px',letterSpacing:'.1em'}} onClick={()=>setOrderForm(true)}>
               BUYURTMA BERISH
             </button>
-            <p className="pay-note">Payme · Click · Naqd pul</p>
+            <p className="pay-note">Karta orqali to'lov · Tez yetkazib berish</p>
           </div>
         )}
       </div>
@@ -500,6 +500,29 @@ export default function Home() {
       <div className={`form-bg${orderForm?' show':''}`} onClick={()=>setOrderForm(false)}>
         <div className="form-box" onClick={e=>e.stopPropagation()}>
           <div className="form-title serif">Buyurtma berish</div>
+
+          {/* PAYMENT INFO */}
+          <div style={{background:'#f7f7f5',border:'1px solid #e4e2dd',padding:'14px',marginBottom:'20px',borderRadius:'2px'}}>
+            <div style={{fontSize:'11px',fontWeight:600,letterSpacing:'.07em',textTransform:'uppercase',marginBottom:'10px',color:'#888'}}>💳 To'lov ma'lumotlari</div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'6px'}}>
+              <span style={{fontSize:'13px',color:'#555'}}>Karta raqami:</span>
+              <span style={{fontSize:'14px',fontWeight:600,letterSpacing:'.06em',fontFamily:'monospace'}}>9860 1606 0740 1702</span>
+            </div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'12px'}}>
+              <span style={{fontSize:'13px',color:'#555'}}>Karta egasi:</span>
+              <span style={{fontSize:'13px',fontWeight:500}}>Jalolova M</span>
+            </div>
+            <div style={{background:'#fff3cd',border:'1px solid #ffc107',padding:'10px 12px',borderRadius:'2px',fontSize:'12px',color:'#856404',lineHeight:'1.6'}}>
+              📸 Buyurtmani tasdiqlash uchun to'lov chekini
+              <a href="https://t.me/tokyobrandsuz_bot" target="_blank" rel="noreferrer"
+                style={{color:'#0d6efd',fontWeight:600,marginLeft:'4px'}}>@tokyobrandsuz_bot</a>
+              ga yuboring
+            </div>
+            <div style={{fontSize:'11px',color:'#aaa',marginTop:'8px',textAlign:'center'}}>
+              ⚡ Tez orada Payme va Click ham qo'shiladi
+            </div>
+          </div>
+
           <div className="field">
             <label>Ismingiz</label>
             <input type="text" placeholder="Ism Familiya" value={orderData.name} onChange={e=>setOrderData(d=>({...d,name:e.target.value}))}/>
@@ -679,34 +702,73 @@ function DetailModal({ detail, onClose, onAdd }) {
   const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
   const colors = detail.colors || []
   const hasColors = colors.length > 0
-  const [activeColorIdx, setActiveColorIdx] = useState(0)
-  const activeColor = hasColors ? colors[activeColorIdx] : null
-  const images = hasColors
-    ? (activeColor?.images?.length > 0 ? activeColor.images : (detail.img ? [detail.img] : []))
-    : (detail.images?.length > 0 ? detail.images : (detail.img ? [detail.img] : []))
+
+  // FIX 4: All color images combined for slider (no color selected state)
+  const allColorImages = hasColors
+    ? colors.flatMap(c => c.images?.length > 0 ? c.images : [])
+    : []
+  const noColorImages = detail.images?.length > 0 ? detail.images : (detail.img ? [detail.img] : [])
+  const images = allColorImages.length > 0 ? allColorImages : noColorImages
+
   const [activeImg, setActiveImg] = useState(0)
   const [selectedSize, setSelectedSize] = useState(null)
-  const [selectedColor, setSelectedColor] = useState(hasColors ? colors[0]?.name : null)
+  const [selectedColor, setSelectedColor] = useState(null)
+  // FIX 5: zoom only on hover, not auto
   const [zoom, setZoom] = useState(false)
   const [zoomPos, setZoomPos] = useState({x:50,y:50})
   const [fullscreen, setFullscreen] = useState(false)
   const fsRef = useRef()
+  const modalImgRef = useRef()
   const swipeRef = useRef(null)
 
-  function selectColor(idx) {
-    setActiveColorIdx(idx)
-    setSelectedColor(colors[idx]?.name)
-    setActiveImg(0)
-  }
+  // When color selected, show that color's images
+  const displayImages = selectedColor && hasColors
+    ? (() => {
+        const c = colors.find(c => c.name === selectedColor)
+        return c?.images?.length > 0 ? c.images : images
+      })()
+    : images
 
-  function prev() { setActiveImg(i => (i-1+images.length)%images.length) }
-  function next() { setActiveImg(i => (i+1)%images.length) }
+  function prev() { setActiveImg(i => (i-1+displayImages.length)%displayImages.length) }
+  function next() { setActiveImg(i => (i+1)%displayImages.length) }
 
   function handleMouseMove(e) {
     const rect = e.currentTarget.getBoundingClientRect()
     setZoomPos({ x:((e.clientX-rect.left)/rect.width)*100, y:((e.clientY-rect.top)/rect.height)*100 })
   }
 
+  // FIX 3: Swipe on modal image
+  useEffect(() => {
+    const el = modalImgRef.current
+    if (!el || displayImages.length <= 1) return
+    function onTS(e) { swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }
+    function onTM(e) {
+      if (!swipeRef.current) return
+      const dx = Math.abs(e.touches[0].clientX - swipeRef.current.x)
+      const dy = Math.abs(e.touches[0].clientY - swipeRef.current.y)
+      if (dx > dy && dx > 8) e.preventDefault()
+    }
+    function onTE(e) {
+      if (!swipeRef.current) return
+      const dx = swipeRef.current.x - e.changedTouches[0].clientX
+      const dy = Math.abs(swipeRef.current.y - e.changedTouches[0].clientY)
+      swipeRef.current = null
+      if (Math.abs(dx) < 40 || Math.abs(dx) < dy) return
+      e.preventDefault(); e.stopPropagation()
+      if (dx > 0) setActiveImg(i=>(i+1)%displayImages.length)
+      else setActiveImg(i=>(i-1+displayImages.length)%displayImages.length)
+    }
+    el.addEventListener('touchstart', onTS, {passive:true})
+    el.addEventListener('touchmove', onTM, {passive:false})
+    el.addEventListener('touchend', onTE, {passive:false})
+    return () => {
+      el.removeEventListener('touchstart', onTS)
+      el.removeEventListener('touchmove', onTM)
+      el.removeEventListener('touchend', onTE)
+    }
+  }, [displayImages.length])
+
+  // Fullscreen swipe
   useEffect(() => {
     if (!fullscreen || !fsRef.current) return
     const el = fsRef.current
@@ -724,31 +786,42 @@ function DetailModal({ detail, onClose, onAdd }) {
       swipeRef.current = null
       if (Math.abs(dx) < 80 || Math.abs(dx) < dy*1.5) return
       e.preventDefault(); e.stopPropagation()
-      if (dx > 0) setActiveImg(i=>(i+1)%images.length)
-      else setActiveImg(i=>(i-1+images.length)%images.length)
+      if (dx > 0) setActiveImg(i=>(i+1)%displayImages.length)
+      else setActiveImg(i=>(i-1+displayImages.length)%displayImages.length)
     }
     el.addEventListener('touchstart', onTS, {passive:true})
     el.addEventListener('touchmove', onTM, {passive:false})
     el.addEventListener('touchend', onTE, {passive:false})
     return () => { el.removeEventListener('touchstart',onTS); el.removeEventListener('touchmove',onTM); el.removeEventListener('touchend',onTE) }
-  }, [fullscreen, images.length])
+  }, [fullscreen, displayImages.length])
 
   return (
     <>
       <div className="modal" onClick={e=>e.stopPropagation()}>
         <div style={{position:'relative',background:'#f5f5f3',overflow:'hidden',display:'flex',flexDirection:'column'}}>
-          <div style={{position:'relative',flex:1,overflow:'hidden',cursor:zoom?'crosshair':'zoom-in',minHeight:0}}
+          {/* FIX 5: No auto-zoom, zoom only on mouse hover (desktop) */}
+          <div ref={modalImgRef}
+            style={{position:'relative',flex:1,overflow:'hidden',cursor:zoom?'crosshair':'default',minHeight:0}}
             onMouseEnter={()=>setZoom(true)} onMouseLeave={()=>setZoom(false)}
-            onMouseMove={handleMouseMove} onClick={()=>setFullscreen(true)}>
-            <img src={images[activeImg]} alt={detail.name}
-              style={{width:'100%',height:'100%',maxHeight:'70vh',objectFit:'cover',display:'block',transition:'transform .1s ease',transformOrigin:`${zoomPos.x}% ${zoomPos.y}%`,transform:zoom?'scale(2.2)':'scale(1)'}}/>
-            {!zoom && <div style={{position:'absolute',bottom:10,right:10,background:'rgba(0,0,0,.5)',color:'#fff',fontSize:'10px',padding:'4px 8px',pointerEvents:'none'}}>🔍 Zoom</div>}
+            onMouseMove={handleMouseMove}>
+            <img src={displayImages[activeImg] || images[0]} alt={detail.name}
+              style={{width:'100%',height:'100%',maxHeight:'70vh',objectFit:'cover',display:'block',
+                transition:'transform .1s ease',
+                transformOrigin:`${zoomPos.x}% ${zoomPos.y}%`,
+                transform:zoom?'scale(2.2)':'scale(1)'}}/>
+            {!zoom && displayImages.length > 1 && (
+              <div style={{position:'absolute',bottom:8,left:'50%',transform:'translateX(-50%)',display:'flex',gap:'4px',pointerEvents:'none'}}>
+                {displayImages.map((_,i)=>(
+                  <span key={i} style={{width:i===activeImg?14:5,height:5,borderRadius:'3px',background:i===activeImg?'#fff':'rgba(255,255,255,.6)',display:'block',transition:'all .2s'}}/>
+                ))}
+              </div>
+            )}
             <button onClick={e=>{e.stopPropagation();setFullscreen(true)}}
               style={{position:'absolute',top:10,right:10,background:'rgba(255,255,255,.85)',border:'none',width:32,height:32,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'14px'}}>⛶</button>
           </div>
-          {images.length>1 && (
+          {displayImages.length>1 && (
             <div style={{display:'flex',gap:'4px',padding:'8px',background:'#fff',overflowX:'auto'}}>
-              {images.map((img,i)=>(
+              {displayImages.map((img,i)=>(
                 <div key={i} onClick={()=>setActiveImg(i)}
                   style={{width:48,height:60,overflow:'hidden',cursor:'pointer',flexShrink:0,border:activeImg===i?'2px solid #111':'2px solid transparent'}}>
                   <img src={img} style={{width:'100%',height:'100%',objectFit:'cover'}} alt=""/>
@@ -756,7 +829,7 @@ function DetailModal({ detail, onClose, onAdd }) {
               ))}
             </div>
           )}
-          {images.length>1 && (
+          {displayImages.length>1 && (
             <>
               <button onClick={prev} style={{position:'absolute',left:8,top:'40%',transform:'translateY(-50%)',background:'rgba(255,255,255,.9)',border:'none',width:36,height:36,fontSize:'20px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>‹</button>
               <button onClick={next} style={{position:'absolute',right:8,top:'40%',transform:'translateY(-50%)',background:'rgba(255,255,255,.9)',border:'none',width:36,height:36,fontSize:'20px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>›</button>
@@ -776,16 +849,19 @@ function DetailModal({ detail, onClose, onAdd }) {
           {hasColors && colors.length > 0 && (
             <div style={{marginBottom:'18px'}}>
               <p style={{fontSize:'11px',color:'#aaa',letterSpacing:'.07em',textTransform:'uppercase',marginBottom:'10px'}}>
-                Rang: <span style={{color:'#111',fontWeight:500}}>{selectedColor}</span>
+                Rang: <span style={{color:'#111',fontWeight:500}}>{selectedColor || "Tanlang"}</span>
               </p>
               <div style={{display:'flex',gap:'8px',flexWrap:'wrap'}}>
                 {colors.map((c,i) => (
-                  <div key={i} title={c.name} onClick={()=>selectColor(i)}
+                  <div key={i} title={c.name}
+                    onClick={()=>{
+                      if(selectedColor===c.name){setSelectedColor(null);setActiveImg(0)}
+                      else{setSelectedColor(c.name);setActiveImg(0)}
+                    }}
                     style={{width:28,height:28,borderRadius:'50%',background:c.hex,cursor:'pointer',
-                      border:activeColorIdx===i?'2px solid #111':'2px solid transparent',
-                      outline:activeColorIdx===i?'1px solid #111':'1px solid #ddd',
-                      outlineOffset:'2px',
-                      transition:'all .15s'}}/>
+                      border:selectedColor===c.name?'2px solid #111':'2px solid transparent',
+                      outline:selectedColor===c.name?'1px solid #111':'1px solid #ddd',
+                      outlineOffset:'2px',transition:'all .15s'}}/>
                 ))}
               </div>
             </div>
@@ -843,7 +919,7 @@ function DetailModal({ detail, onClose, onAdd }) {
             <button onClick={()=>setFullscreen(false)} style={{background:'rgba(255,255,255,.15)',border:'none',color:'#fff',width:36,height:36,fontSize:'18px',cursor:'pointer',borderRadius:'50%'}}>×</button>
           </div>
           <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
-            <img src={images[activeImg]} alt={detail.name} style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',userSelect:'none',pointerEvents:'none'}}/>
+            <img src={displayImages[activeImg]||images[0]} alt={detail.name} style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain',userSelect:'none',pointerEvents:'none'}}/>
           </div>
           {images.length>1 && (
             <div style={{flexShrink:0,padding:'12px 16px 24px'}} onClick={e=>e.stopPropagation()}>
@@ -852,7 +928,7 @@ function DetailModal({ detail, onClose, onAdd }) {
                 <button onClick={next} style={{background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.2)',color:'#fff',width:52,height:52,fontSize:'22px',cursor:'pointer',borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>
               </div>
               <div style={{display:'flex',gap:'6px',justifyContent:'center',flexWrap:'wrap'}}>
-                {images.map((img,i)=>(
+                {displayImages.map((img,i)=>(
                   <div key={i} onClick={e=>{e.stopPropagation();setActiveImg(i)}}
                     style={{width:48,height:48,overflow:'hidden',cursor:'pointer',border:activeImg===i?'2px solid #fff':'2px solid rgba(255,255,255,.2)',borderRadius:'2px',flexShrink:0}}>
                     <img src={img} style={{width:'100%',height:'100%',objectFit:'cover'}} alt=""/>
@@ -870,14 +946,54 @@ function DetailModal({ detail, onClose, onAdd }) {
 function ProductCard({ p, onAdd, onDetail }) {
   const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
   const colors = p.colors || []
-  const [activeCardColorIdx, setActiveCardColorIdx] = useState(0)
-  const images = colors.length > 0
-    ? (colors[activeCardColorIdx]?.images?.length > 0 ? colors[activeCardColorIdx].images : (p.img?[p.img]:[]))
-    : (p.images?.length>0 ? p.images : (p.img?[p.img]:[]))
+
+  // All images from all colors combined for card swipe
+  const allImages = colors.length > 0
+    ? colors.flatMap(c => c.images?.length > 0 ? c.images : [])
+    : (p.images?.length > 0 ? p.images : (p.img ? [p.img] : []))
+  const images = allImages.length > 0 ? allImages : (p.img ? [p.img] : [])
+
   const [imgIdx, setImgIdx] = useState(0)
+  const cardSwipeRef = useRef(null)
+  const imgWrapRef = useRef(null)
+
+  // Touch swipe on card image
+  useEffect(() => {
+    const el = imgWrapRef.current
+    if (!el || images.length <= 1) return
+    function onTS(e) {
+      cardSwipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    }
+    function onTM(e) {
+      if (!cardSwipeRef.current) return
+      const dx = Math.abs(e.touches[0].clientX - cardSwipeRef.current.x)
+      const dy = Math.abs(e.touches[0].clientY - cardSwipeRef.current.y)
+      if (dx > dy && dx > 8) e.preventDefault()
+    }
+    function onTE(e) {
+      if (!cardSwipeRef.current) return
+      const dx = cardSwipeRef.current.x - e.changedTouches[0].clientX
+      const dy = Math.abs(cardSwipeRef.current.y - e.changedTouches[0].clientY)
+      cardSwipeRef.current = null
+      if (Math.abs(dx) < 30 || Math.abs(dx) < dy) return
+      e.preventDefault()
+      e.stopPropagation()
+      if (dx > 0) setImgIdx(i => (i + 1) % images.length)
+      else setImgIdx(i => (i - 1 + images.length) % images.length)
+    }
+    el.addEventListener('touchstart', onTS, { passive: true })
+    el.addEventListener('touchmove', onTM, { passive: false })
+    el.addEventListener('touchend', onTE, { passive: false })
+    return () => {
+      el.removeEventListener('touchstart', onTS)
+      el.removeEventListener('touchmove', onTM)
+      el.removeEventListener('touchend', onTE)
+    }
+  }, [images.length])
+
   return (
     <div className="pcard" onClick={()=>onDetail(p.id)}>
-      <div className="pcard-img-wrap">
+      <div className="pcard-img-wrap" ref={imgWrapRef}>
         <img src={images[imgIdx]||'https://images.unsplash.com/photo-1523381294911-8d3cead13475?w=400'} alt={p.name} loading="lazy"/>
         {images.length>1 && (
           <>
@@ -905,8 +1021,8 @@ function ProductCard({ p, onAdd, onDetail }) {
         <div style={{display:'flex',gap:'5px',marginBottom:'6px',flexWrap:'wrap'}}>
           {p.colors.map((c,i) => (
             <div key={i} title={c.name}
-              style={{width:14,height:14,borderRadius:'50%',background:c.hex,border:'1.5px solid',borderColor:imgIdx===0&&i===0?'#111':'#ddd',cursor:'pointer',transition:'border-color .15s'}}
-              onClick={e=>{e.stopPropagation();setImgIdx(0);}}/>
+              style={{width:14,height:14,borderRadius:'50%',background:c.hex,border:'1.5px solid #ddd',cursor:'pointer'}}
+              onClick={e=>e.stopPropagation()}/>
           ))}
         </div>
       )}
