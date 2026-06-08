@@ -38,6 +38,123 @@ const EMPTY_FORM = {
 }
 
 export default function Admin() {
+  const [authed, setAuthed] = useState(false)
+  const [pwInput, setPwInput] = useState('')
+  const [pwError, setPwError] = useState(false)
+  const [pwLoading, setPwLoading] = useState(false)
+
+  // Check session storage for auth
+  useEffect(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('admin_authed') === 'yes') {
+      setAuthed(true)
+    }
+  }, [])
+
+  async function handleLogin(e) {
+    e.preventDefault()
+    setPwLoading(true)
+    setPwError(false)
+    try {
+      const res = await fetch('/api/check-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwInput })
+      })
+      if (res.ok) {
+        sessionStorage.setItem('admin_authed', 'yes')
+        setAuthed(true)
+      } else {
+        setPwError(true)
+        setPwInput('')
+      }
+    } catch {
+      setPwError(true)
+    }
+    setPwLoading(false)
+  }
+
+  if (!authed) {
+    return (
+      <>
+        <Head><title>Admin — TOKYO Brands</title></Head>
+        <div style={{
+          minHeight:'100vh',
+          background:'#f7f7f5',
+          display:'flex',
+          alignItems:'center',
+          justifyContent:'center',
+          padding:'24px'
+        }}>
+          <div style={{
+            background:'#fff',
+            border:'1px solid #e4e2dd',
+            padding:'40px 36px',
+            width:'100%',
+            maxWidth:'360px',
+          }}>
+            <div style={{
+              fontFamily:"'Cormorant Garamond', serif",
+              fontSize:'24px',
+              fontWeight:400,
+              marginBottom:'8px',
+              textAlign:'center'
+            }}>
+              TOKYO <em>Brands</em>
+            </div>
+            <p style={{fontSize:'12px',color:'#aaa',textAlign:'center',marginBottom:'28px',letterSpacing:'.04em'}}>
+              Admin panel
+            </p>
+            <form onSubmit={handleLogin}>
+              <div style={{marginBottom:'16px'}}>
+                <label style={{display:'block',fontSize:'10px',letterSpacing:'.08em',color:'#888',textTransform:'uppercase',marginBottom:'6px'}}>
+                  Parol
+                </label>
+                <input
+                  type="password"
+                  value={pwInput}
+                  onChange={e => setPwInput(e.target.value)}
+                  placeholder="••••••••"
+                  autoFocus
+                  style={{
+                    width:'100%',
+                    border: pwError ? '1px solid #c0392b' : '1px solid #e4e2dd',
+                    padding:'10px 12px',
+                    fontSize:'14px',
+                    background:'#fafaf8',
+                    outline:'none',
+                  }}
+                />
+                {pwError && (
+                  <p style={{fontSize:'12px',color:'#c0392b',marginTop:'6px'}}>
+                    Noto'g'ri parol. Qayta urinib ko'ring.
+                  </p>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={pwLoading || !pwInput}
+                style={{
+                  width:'100%',
+                  background:'#111',
+                  color:'#fff',
+                  border:'none',
+                  padding:'12px',
+                  fontSize:'12px',
+                  fontWeight:500,
+                  letterSpacing:'.08em',
+                  textTransform:'uppercase',
+                  cursor: pwLoading || !pwInput ? 'not-allowed' : 'pointer',
+                  opacity: pwLoading || !pwInput ? 0.6 : 1,
+                }}>
+                {pwLoading ? 'Tekshirilmoqda...' : 'KIRISH'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </>
+    )
+  }
+
   const [products, setProducts] = useState([])
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
