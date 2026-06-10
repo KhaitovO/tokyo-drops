@@ -38,123 +38,13 @@ const EMPTY_FORM = {
 }
 
 export default function Admin() {
+  // AUTH HOOKS - must be first
   const [authed, setAuthed] = useState(false)
   const [pwInput, setPwInput] = useState('')
   const [pwError, setPwError] = useState(false)
   const [pwLoading, setPwLoading] = useState(false)
 
-  // Check session storage for auth
-  useEffect(() => {
-    if (typeof window !== 'undefined' && sessionStorage.getItem('admin_authed') === 'yes') {
-      setAuthed(true)
-    }
-  }, [])
-
-  async function handleLogin(e) {
-    e.preventDefault()
-    setPwLoading(true)
-    setPwError(false)
-    try {
-      const res = await fetch('/api/check-admin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: pwInput })
-      })
-      if (res.ok) {
-        sessionStorage.setItem('admin_authed', 'yes')
-        setAuthed(true)
-      } else {
-        setPwError(true)
-        setPwInput('')
-      }
-    } catch {
-      setPwError(true)
-    }
-    setPwLoading(false)
-  }
-
-  if (!authed) {
-    return (
-      <>
-        <Head><title>Admin — TOKYO Brands</title></Head>
-        <div style={{
-          minHeight:'100vh',
-          background:'#f7f7f5',
-          display:'flex',
-          alignItems:'center',
-          justifyContent:'center',
-          padding:'24px'
-        }}>
-          <div style={{
-            background:'#fff',
-            border:'1px solid #e4e2dd',
-            padding:'40px 36px',
-            width:'100%',
-            maxWidth:'360px',
-          }}>
-            <div style={{
-              fontFamily:"'Cormorant Garamond', serif",
-              fontSize:'24px',
-              fontWeight:400,
-              marginBottom:'8px',
-              textAlign:'center'
-            }}>
-              TOKYO <em>Brands</em>
-            </div>
-            <p style={{fontSize:'12px',color:'#aaa',textAlign:'center',marginBottom:'28px',letterSpacing:'.04em'}}>
-              Admin panel
-            </p>
-            <form onSubmit={handleLogin}>
-              <div style={{marginBottom:'16px'}}>
-                <label style={{display:'block',fontSize:'10px',letterSpacing:'.08em',color:'#888',textTransform:'uppercase',marginBottom:'6px'}}>
-                  Parol
-                </label>
-                <input
-                  type="password"
-                  value={pwInput}
-                  onChange={e => setPwInput(e.target.value)}
-                  placeholder="••••••••"
-                  autoFocus
-                  style={{
-                    width:'100%',
-                    border: pwError ? '1px solid #c0392b' : '1px solid #e4e2dd',
-                    padding:'10px 12px',
-                    fontSize:'14px',
-                    background:'#fafaf8',
-                    outline:'none',
-                  }}
-                />
-                {pwError && (
-                  <p style={{fontSize:'12px',color:'#c0392b',marginTop:'6px'}}>
-                    Noto'g'ri parol. Qayta urinib ko'ring.
-                  </p>
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={pwLoading || !pwInput}
-                style={{
-                  width:'100%',
-                  background:'#111',
-                  color:'#fff',
-                  border:'none',
-                  padding:'12px',
-                  fontSize:'12px',
-                  fontWeight:500,
-                  letterSpacing:'.08em',
-                  textTransform:'uppercase',
-                  cursor: pwLoading || !pwInput ? 'not-allowed' : 'pointer',
-                  opacity: pwLoading || !pwInput ? 0.6 : 1,
-                }}>
-                {pwLoading ? 'Tekshirilmoqda...' : 'KIRISH'}
-              </button>
-            </form>
-          </div>
-        </div>
-      </>
-    )
-  }
-
+  // ALL OTHER HOOKS - must be before any conditional return
   const [products, setProducts] = useState([])
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -171,7 +61,22 @@ export default function Admin() {
   const [urlInputs, setUrlInputs] = useState({})
   const fileInputRef = useRef()
 
-  useEffect(() => { fetchProducts(); fetchOrders() }, [])
+  // Check session on load
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem('admin_authed') === 'yes') {
+        setAuthed(true)
+      }
+    } catch(e) {}
+  }, [])
+
+  // Fetch data only when authed
+  useEffect(() => {
+    if (authed) {
+      fetchProducts()
+      fetchOrders()
+    }
+  }, [authed])
 
   async function fetchProducts() {
     setLoading(true)
@@ -183,6 +88,30 @@ export default function Admin() {
   async function fetchOrders() {
     const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false })
     setOrders(data || [])
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault()
+    if (!pwInput) return
+    setPwLoading(true)
+    setPwError(false)
+    try {
+      const res = await fetch('/api/check-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pwInput })
+      })
+      if (res.ok) {
+        sessionStorage.setItem('admin_authed', 'yes')
+        setAuthed(true)
+      } else {
+        setPwError(true)
+        setPwInput('')
+      }
+    } catch(e) {
+      setPwError(true)
+    }
+    setPwLoading(false)
   }
 
   function notify(msg) { setNotif(msg); setTimeout(() => setNotif(null), 2500) }
@@ -223,7 +152,6 @@ export default function Admin() {
     setFormOpen(true)
   }
 
-  // COLOR FUNCTIONS
   function addColor() {
     if (!newColorName.trim()) { notify("Rang nomini kiriting"); return }
     if (form.colors.find(c => c.hex === newColorHex)) { notify("Bu rang allaqachon bor"); return }
@@ -232,7 +160,7 @@ export default function Admin() {
     setActiveColorIdx(newColors.length - 1)
     setNewColorName('')
     setNewColorHex('#1a1a1a')
-    notify("Rang qo'shildi ✓")
+    notify("Rang qo'shildi")
   }
 
   function removeColor(idx) {
@@ -262,7 +190,7 @@ export default function Admin() {
     const existing = form.colors[colorIdx]?.images || []
     updateColorImages(colorIdx, [...existing, ...uploaded])
     setUploading(false)
-    notify(`${uploaded.length} ta rasm yuklandi ✓`)
+    notify(`${uploaded.length} ta rasm yuklandi`)
   }
 
   function addUrlToColor(colorIdx) {
@@ -271,7 +199,7 @@ export default function Admin() {
     const existing = form.colors[colorIdx]?.images || []
     updateColorImages(colorIdx, [...existing, url])
     setUrlInputs(u => ({ ...u, [colorIdx]: '' }))
-    notify("Rasm qo'shildi ✓")
+    notify("Rasm qo'shildi")
   }
 
   function removeColorImage(colorIdx, imgIdx) {
@@ -318,7 +246,7 @@ export default function Admin() {
     if (!error) {
       fetchProducts()
       setFormOpen(false)
-      notify(editId ? "Yangilandi ✓" : "Qo'shildi ✓")
+      notify(editId ? "Yangilandi" : "Qo'shildi")
     } else notify("Xato: " + error.message)
   }
 
@@ -339,6 +267,72 @@ export default function Admin() {
   const statusLabel = { new: 'Yangi', processing: 'Jarayonda', delivered: 'Yetkazildi', cancelled: 'Bekor' }
   const statusColor = { new: '#2471a3', processing: '#b7950b', delivered: '#1a7a4a', cancelled: '#c0392b' }
 
+  // LOGIN SCREEN - after all hooks
+  if (!authed) {
+    return (
+      <>
+        <Head><title>Admin — TOKYO Brands</title></Head>
+        <div style={{minHeight:'100vh',background:'#f7f7f5',display:'flex',alignItems:'center',justifyContent:'center',padding:'24px'}}>
+          <div style={{background:'#fff',border:'1px solid #e4e2dd',padding:'40px 36px',width:'100%',maxWidth:'360px'}}>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'26px',fontWeight:400,marginBottom:'6px',textAlign:'center'}}>
+              TOKYO <em>Brands</em>
+            </div>
+            <p style={{fontSize:'12px',color:'#aaa',textAlign:'center',marginBottom:'32px',letterSpacing:'.06em',textTransform:'uppercase'}}>
+              Admin panel
+            </p>
+            <form onSubmit={handleLogin}>
+              <div style={{marginBottom:'16px'}}>
+                <label style={{display:'block',fontSize:'10px',letterSpacing:'.08em',color:'#888',textTransform:'uppercase',marginBottom:'8px'}}>
+                  Parol
+                </label>
+                <input
+                  type="password"
+                  value={pwInput}
+                  onChange={e => setPwInput(e.target.value)}
+                  placeholder="••••••••"
+                  autoFocus
+                  style={{
+                    width:'100%',
+                    border: pwError ? '1px solid #c0392b' : '1px solid #e4e2dd',
+                    padding:'11px 13px',
+                    fontSize:'15px',
+                    background:'#fafaf8',
+                    outline:'none',
+                    boxSizing:'border-box',
+                  }}
+                />
+                {pwError && (
+                  <p style={{fontSize:'12px',color:'#c0392b',marginTop:'6px'}}>
+                    Parol noto&apos;g&apos;ri. Qayta urinib ko&apos;ring.
+                  </p>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={pwLoading || !pwInput}
+                style={{
+                  width:'100%',
+                  background: pwLoading || !pwInput ? '#ccc' : '#111',
+                  color:'#fff',
+                  border:'none',
+                  padding:'13px',
+                  fontSize:'12px',
+                  fontWeight:600,
+                  letterSpacing:'.1em',
+                  textTransform:'uppercase',
+                  cursor: pwLoading || !pwInput ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {pwLoading ? 'Tekshirilmoqda...' : 'KIRISH'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // ADMIN PANEL - only shown when authed
   return (
     <>
       <Head><title>Admin — TOKYO Brands</title></Head>
@@ -349,7 +343,7 @@ export default function Admin() {
           <div className="logo serif">TOKYO <em>Brands</em>
             <span style={{fontSize:'11px',color:'#999',fontFamily:'DM Sans',fontStyle:'normal',marginLeft:'8px'}}>Admin</span>
           </div>
-          <Link href="/" style={{fontSize:'12px',color:'#888',letterSpacing:'.06em'}}>← Do'konga qayt</Link>
+          <Link href="/" style={{fontSize:'12px',color:'#888',letterSpacing:'.06em'}}>← Do&apos;konga qayt</Link>
         </div>
       </header>
 
@@ -362,7 +356,7 @@ export default function Admin() {
           <div style={{display:'flex',gap:'10px',flexWrap:'wrap'}}>
             <button className={tab==='products'?'btn-dark':'btn-outline'} onClick={()=>setTab('products')}>Mahsulotlar</button>
             <button className={tab==='orders'?'btn-dark':'btn-outline'} onClick={()=>setTab('orders')}>Buyurtmalar</button>
-            {tab==='products' && <button className="btn-dark" onClick={openAdd}>+ Qo'shish</button>}
+            {tab==='products' && <button className="btn-dark" onClick={openAdd}>+ Qo&apos;shish</button>}
           </div>
         </div>
 
@@ -399,7 +393,7 @@ export default function Admin() {
                   <span className="th">Amallar</span>
                 </div>
                 {filteredProducts.length === 0 && (
-                  <div style={{padding:'40px',textAlign:'center',color:'#999'}}>Mahsulot yo'q</div>
+                  <div style={{padding:'40px',textAlign:'center',color:'#999'}}>Mahsulot yo&apos;q</div>
                 )}
                 {filteredProducts.map(p => (
                   <div key={p.id} className="table-row">
@@ -429,7 +423,7 @@ export default function Admin() {
                     </div>
                     <div className="trow-actions">
                       <button className="act-btn act-edit" onClick={()=>openEdit(p)}>Tahrir</button>
-                      <button className="act-btn act-del" onClick={()=>del(p.id)}>O'chir</button>
+                      <button className="act-btn act-del" onClick={()=>del(p.id)}>O&apos;chir</button>
                     </div>
                   </div>
                 ))}
@@ -443,7 +437,7 @@ export default function Admin() {
             <div style={{display:'grid',gridTemplateColumns:'1fr 130px 150px 130px 110px',padding:'10px 16px',background:'#f7f7f5',borderBottom:'1px solid #e4e2dd'}}>
               {['Mijoz','Telefon','Jami','Status','Sana'].map(h=><span key={h} className="th">{h}</span>)}
             </div>
-            {orders.length === 0 && <div style={{padding:'40px',textAlign:'center',color:'#999'}}>Buyurtma yo'q</div>}
+            {orders.length === 0 && <div style={{padding:'40px',textAlign:'center',color:'#999'}}>Buyurtma yo&apos;q</div>}
             {orders.map(o => (
               <div key={o.id} style={{display:'grid',gridTemplateColumns:'1fr 130px 150px 130px 110px',padding:'12px 16px',borderBottom:'1px solid #f5f5f5',alignItems:'center'}}>
                 <div>
@@ -463,13 +457,11 @@ export default function Admin() {
         )}
       </div>
 
-      {/* FORM MODAL */}
       {formOpen && (
         <div className="form-bg show" onClick={()=>setFormOpen(false)}>
           <div className="form-box" onClick={e=>e.stopPropagation()} style={{maxWidth:'580px'}}>
             <div className="form-title serif">{editId ? "Tahrirlash" : "Yangi mahsulot"}</div>
 
-            {/* CATEGORIES */}
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'16px'}}>
               <div className="field" style={{marginBottom:0}}>
                 <label>Asosiy kategoriya</label>
@@ -486,13 +478,12 @@ export default function Admin() {
               </div>
             </div>
 
-            {/* BASIC FIELDS */}
             {[
-              {l:"Nomi *", k:"name", t:"text", ph:"Masalan: Uniqlo Crew Neck T-shirt"},
+              {l:"Nomi *", k:"name", t:"text", ph:"Masalan: Uniqlo T-shirt"},
               {l:"Narx (so'm) *", k:"price", t:"number", ph:"185000"},
-              {l:"Eski narx (so'm)", k:"old", t:"number", ph:"Bo'lmasa bo'sh qoldiring"},
+              {l:"Eski narx (so'm)", k:"old", t:"number", ph:"Bo'lmasa bo'sh"},
               {l:"Zaxira (dona)", k:"stock", t:"number", ph:"10"},
-              {l:"Tavsif", k:"description", t:"text", ph:"Mahsulot haqida qisqacha"},
+              {l:"Tavsif", k:"description", t:"text", ph:"Mahsulot haqida"},
             ].map(({l,k,t,ph}) => (
               <div key={k} className="field">
                 <label>{l}</label>
@@ -500,21 +491,19 @@ export default function Admin() {
               </div>
             ))}
 
-            {/* KOSMETIKA EXTRA */}
             {form.main_cat === 'Kosmetika' && (
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'16px'}}>
                 <div className="field" style={{marginBottom:0}}>
                   <label>Hajmi (ml/g/dona)</label>
-                  <input type="text" value={form.volume||''} placeholder="50ml, 30g..." onChange={e=>upd('volume',e.target.value)}/>
+                  <input type="text" value={form.volume||''} placeholder="50ml..." onChange={e=>upd('volume',e.target.value)}/>
                 </div>
                 <div className="field" style={{marginBottom:0}}>
-                  <label>Muddat / Necha kunlik</label>
+                  <label>Muddat</label>
                   <input type="text" value={form.duration||''} placeholder="30 kunlik..." onChange={e=>upd('duration',e.target.value)}/>
                 </div>
               </div>
             )}
 
-            {/* SIZES */}
             {form.main_cat !== 'Kosmetika' && (
               <div className="field">
                 <label>O'lchamlar</label>
@@ -526,11 +515,9 @@ export default function Admin() {
               </div>
             )}
 
-            {/* COLORS */}
             <div className="field">
               <label>Ranglar va rasmlar</label>
 
-              {/* Color tabs */}
               {form.colors.length > 0 && (
                 <div style={{display:'flex',gap:'6px',marginBottom:'12px',flexWrap:'wrap'}}>
                   {form.colors.map((c, i) => (
@@ -546,15 +533,12 @@ export default function Admin() {
                 </div>
               )}
 
-              {/* Active color image section */}
               {form.colors.length > 0 && activeColor && (
                 <div style={{background:'#fafaf8',border:'1px solid #e4e2dd',padding:'14px',marginBottom:'12px',borderRadius:'2px'}}>
                   <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'10px'}}>
                     <div style={{width:14,height:14,borderRadius:'50%',background:activeColor.hex,border:'1px solid rgba(0,0,0,.1)'}}/>
                     <span style={{fontSize:'11px',color:'#666',letterSpacing:'.05em',textTransform:'uppercase'}}>{activeColor.name} uchun rasmlar</span>
                   </div>
-
-                  {/* Image previews */}
                   {activeColor.images?.length > 0 && (
                     <div style={{display:'flex',gap:'6px',marginBottom:'10px',flexWrap:'wrap'}}>
                       {activeColor.images.map((img, i) => (
@@ -566,17 +550,12 @@ export default function Admin() {
                       ))}
                     </div>
                   )}
-
-                  {/* File upload */}
-                  <input type="file" multiple accept="image/*"
-                    id={`fu-${activeColorIdx}`} style={{display:'none'}}
+                  <input type="file" multiple accept="image/*" id={`fu-${activeColorIdx}`} style={{display:'none'}}
                     onChange={e=>uploadColorImages(activeColorIdx, Array.from(e.target.files))}/>
                   <label htmlFor={`fu-${activeColorIdx}`}
                     style={{display:'inline-block',border:'1px dashed #ccc',padding:'7px 14px',fontSize:'12px',cursor:'pointer',color:'#555',marginBottom:'8px',borderRadius:'2px'}}>
-                    {uploading ? '⏳ Yuklanmoqda...' : '📸 Rasm yuklash'}
+                    {uploading ? 'Yuklanmoqda...' : '📸 Rasm yuklash'}
                   </label>
-
-                  {/* URL input */}
                   <div style={{display:'flex',gap:'6px'}}>
                     <input type="text"
                       value={urlInputs[activeColorIdx]||''}
@@ -585,16 +564,13 @@ export default function Admin() {
                       placeholder="URL: https://..."
                       style={{flex:1,border:'1px solid #e4e2dd',padding:'7px 10px',fontSize:'12px',background:'#fff'}}/>
                     <button type="button" onClick={()=>addUrlToColor(activeColorIdx)}
-                      style={{background:'#111',color:'#fff',border:'none',padding:'7px 12px',fontSize:'11px',cursor:'pointer'}}>+ Qo'sh</button>
+                      style={{background:'#111',color:'#fff',border:'none',padding:'7px 12px',fontSize:'11px',cursor:'pointer'}}>+ Qo&apos;sh</button>
                   </div>
                 </div>
               )}
 
-              {/* Add new color */}
               <div style={{border:'1px solid #e4e2dd',padding:'14px',borderRadius:'2px'}}>
-                <p style={{fontSize:'11px',color:'#888',letterSpacing:'.05em',textTransform:'uppercase',marginBottom:'10px'}}>Yangi rang qo'shish</p>
-
-                {/* Preset swatches */}
+                <p style={{fontSize:'11px',color:'#888',letterSpacing:'.05em',textTransform:'uppercase',marginBottom:'10px'}}>Yangi rang qo&apos;shish</p>
                 <div style={{display:'flex',gap:'5px',flexWrap:'wrap',marginBottom:'12px'}}>
                   {PRESET_COLORS.map((c,i) => (
                     <div key={i} title={c.name}
@@ -604,7 +580,6 @@ export default function Admin() {
                       onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}/>
                   ))}
                 </div>
-
                 <div style={{display:'grid',gridTemplateColumns:'1fr 40px 100px auto',gap:'8px',alignItems:'center'}}>
                   <input type="text" value={newColorName}
                     onChange={e=>setNewColorName(e.target.value)}
