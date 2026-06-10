@@ -118,8 +118,8 @@ export default function Home() {
       color: i.selectedColor
     }))
 
-    // 1. Save to Supabase
-    const { error } = await supabase.from('orders').insert([{
+    // 1. Save to Supabase — get order ID back
+    const { data: orderResult, error } = await supabase.from('orders').insert([{
       customer_name: orderData.name,
       phone: orderData.phone,
       telegram: orderData.telegram,
@@ -127,11 +127,11 @@ export default function Home() {
       total: cartTotal,
       items: orderItems,
       status: 'new'
-    }])
+    }]).select('id').single()
 
     if (error) { notify('Xato: ' + error.message); return }
 
-    // 2. Send Telegram notification
+    // 2. Send Telegram notification with order ID
     try {
       await fetch('/api/orders', {
         method: 'POST',
@@ -143,6 +143,7 @@ export default function Home() {
           address: orderData.address,
           total: cartTotal,
           items: orderItems,
+          order_id: orderResult?.id,
         })
       })
     } catch (e) {

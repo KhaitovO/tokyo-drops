@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { customer_name, phone, telegram, address, total, items } = req.body
+  const { customer_name, phone, telegram, address, total, items, order_id } = req.body
   if (!phone || !total || !items) {
     return res.status(400).json({ error: 'Missing required fields' })
   }
@@ -31,29 +31,30 @@ export default async function handler(req, res) {
       : telegram
     : "Ko'rsatilmagan"
 
-  async function sendMessage(chatId, text) {
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+  async function sendMessage(chatId, text, extra = {}) {
+    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true })
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true, ...extra })
     })
+    return r.json()
   }
 
   try {
-    // 1. Notify OWNER
+    // 1. Notify OWNER (pending confirmation)
     await sendMessage(OWNER_CHAT_ID,
-      `🛍 <b>YANGI BUYURTMA!</b>\n\n` +
+      `🛍 <b>YANGI BUYURTMA!</b> — ⏳ Tasdiqlash kutilmoqda\n\n` +
       `👤 <b>Mijoz:</b> ${customer_name || "Noma'lum"}\n` +
       `📞 <b>Telefon:</b> ${phone}\n` +
       `💬 <b>Telegram:</b> ${telegramDisplay}\n` +
       `📍 <b>Manzil:</b> ${address || "Ko'rsatilmagan"}\n\n` +
-      `🧾 <b>Buyurtma (${totalItems} ta mahsulot):</b>\n${itemsList}\n\n` +
+      `🧾 <b>Buyurtma (${totalItems} ta):</b>\n${itemsList}\n\n` +
       `💰 <b>Jami: ${totalFormatted} so'm</b>\n` +
-      `💳 <b>To'lov:</b> Karta orqali · ⏳ Chek kutilmoqda\n\n` +
+      `💳 Karta orqali · ⏳ Chek kutilmoqda\n\n` +
       `⏰ ${new Date().toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent' })}`
     )
 
-    // 2. Find customer Chat ID from Supabase
+    // 2. Send confirmation request to CUSTOMER with inline buttons
     if (telegram) {
       const username = telegram.startsWith('@') ? telegram.slice(1) : telegram
       const { data: user } = await supabase
@@ -63,15 +64,22 @@ export default async function handler(req, res) {
         .single()
 
       if (user?.id) {
-        // Send confirmation to customer
         await sendMessage(user.id,
-          `✅ <b>Buyurtmangiz qabul qilindi!</b>\n\n` +
+          `🛍 <b>Buyurtmangizni tasdiqlang!</b>\n\n` +
           `🧾 <b>Buyurtma:</b>\n${itemsList}\n\n` +
           `💰 <b>Jami: ${totalFormatted} so'm</b>\n\n` +
           `💳 <b>To'lov:</b>\n` +
           `Karta: <code>9860 1606 0740 1702</code>\n` +
           `Egasi: Jalolova M\n\n` +
-          `📸 <b>To'lovdan keyin chek screenshotini shu botga yuboring!</b>`
+          `Buyurtmangiz to'g'rimi? Tasdiqlang 👇`,
+          {
+            reply_markup: {
+              inline_keyboard: [[
+                { text: "✅ Tasdiqlash", callback_data: `confirm_${order_id}` },
+                { text: "❌ Bekor qilish", callback_data: `cancel_${order_id}` }
+              ]]
+            }
+          }
         )
       }
     }

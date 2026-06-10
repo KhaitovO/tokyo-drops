@@ -11,24 +11,94 @@ export default async function handler(req, res) {
   const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
   const OWNER_CHAT_ID = process.env.TELEGRAM_CHAT_ID
 
-  async function sendMessage(chatId, text) {
+  async function sendMessage(chatId, text, extra = {}) {
     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true })
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true, ...extra })
     })
   }
 
-  async function forwardPhoto(fileId, caption) {
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+  async function answerCallback(callbackQueryId, text) {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/answerCallbackQuery`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: OWNER_CHAT_ID, photo: fileId, caption, parse_mode: 'HTML' })
+      body: JSON.stringify({ callback_query_id: callbackQueryId, text })
+    })
+  }
+
+  async function editMessage(chatId, messageId, text) {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/editMessageText`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, message_id: messageId, text, parse_mode: 'HTML' })
     })
   }
 
   try {
-    const msg = req.body?.message
+    const update = req.body
+
+    // ── CALLBACK QUERY (button pressed) ──
+    if (update.callback_query) {
+      const cb = update.callback_query
+      const data = cb.data
+      const chatId = cb.message.chat.id
+      const messageId = cb.message.message_id
+      const username = cb.from?.username ? `@${cb.from.username}` : cb.from?.first_name
+
+      if (data.startsWith('confirm_')) {
+        const orderId = data.replace('confirm_', '')
+
+        // Update order status in Supabase
+        await supabase.from('orders').update({ status: 'processing' }).eq('id', orderId)
+
+        // Edit customer message
+        await editMessage(chatId, messageId,
+          `✅ <b>Buyurtma tasdiqlandi!</b>\n\n` +
+          `Endi to'lovni amalga oshiring:\n` +
+          `Karta: <code>9860 1606 0740 1702</code>\n` +
+          `Egasi: Jalolova M\n\n` +
+          `📸 To'lovdan keyin chek screenshotini shu botga yuboring!`
+        )
+
+        // Notify owner
+        await sendMessage(OWNER_CHAT_ID,
+          `✅ <b>Mijoz buyurtmani tasdiqladi!</b>\n\n` +
+          `👤 ${username}\n` +
+          `🆔 Buyurtma: #${orderId}\n\n` +
+          `⏳ Chek kutilmoqda...`
+        )
+
+        await answerCallback(cb.id, "Tasdiqlandi!")
+
+      } else if (data.startsWith('cancel_')) {
+        const orderId = data.replace('cancel_', '')
+
+        // Update order status
+        await supabase.from('orders').update({ status: 'cancelled' }).eq('id', orderId)
+
+        // Edit customer message
+        await editMessage(chatId, messageId,
+          `❌ <b>Buyurtma bekor qilindi.</b>\n\n` +
+          `Savollaringiz bo'lsa bog'laning:\n` +
+          `🛍 <a href="https://tokyo-brands-uz.vercel.app">tokyo-brands-uz.vercel.app</a>`
+        )
+
+        // Notify owner
+        await sendMessage(OWNER_CHAT_ID,
+          `❌ <b>Mijoz buyurtmani bekor qildi!</b>\n\n` +
+          `👤 ${username}\n` +
+          `🆔 Buyurtma: #${orderId}`
+        )
+
+        await answerCallback(cb.id, "Bekor qilindi")
+      }
+
+      return res.status(200).end()
+    }
+
+    // ── REGULAR MESSAGE ──
+    const msg = update.message
     if (!msg) return res.status(200).end()
 
     const chatId = msg.chat.id
@@ -36,9 +106,8 @@ export default async function handler(req, res) {
     const firstName = msg.from?.first_name || ''
     const displayName = username ? `@${username}` : firstName
 
-    // /start — save user to Supabase
+    // /start
     if (msg.text === '/start') {
-      // Save or update telegram_users
       await supabase.from('telegram_users').upsert({
         id: chatId,
         username: username || null,
@@ -48,24 +117,33 @@ export default async function handler(req, res) {
       await sendMessage(chatId,
         `Salom, ${firstName}! 👋\n\n` +
         `Bu <b>TOKYO Brands</b> rasmiy buyurtma boti.\n\n` +
-        `Buyurtma bergandan so'ng to'lov chekini (screenshot) shu botga yuboring — biz tasdiqlaylik!\n\n` +
+        `Buyurtma bergandan so'ng:\n` +
+        `1️⃣ Tasdiqlash tugmasini bosing\n` +
+        `2️⃣ Kartaga to'lov qiling\n` +
+        `3️⃣ Chek screenshotini shu botga yuboring\n\n` +
         `🛍 <a href="https://tokyo-brands-uz.vercel.app">tokyo-brands-uz.vercel.app</a>`
       )
       return res.status(200).end()
     }
 
-    // Photo — forward to owner
+    // Photo (chek)
     if (msg.photo) {
       const fileId = msg.photo[msg.photo.length - 1].file_id
       const caption = msg.caption || ''
 
-      await forwardPhoto(
-        fileId,
-        `📸 <b>Chek keldi!</b>\n\n👤 Mijoz: ${displayName}\n🆔 Chat ID: ${chatId}${caption ? `\n💬 Izoh: ${caption}` : ''}`
-      )
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: OWNER_CHAT_ID,
+          photo: fileId,
+          caption: `📸 <b>Chek keldi!</b>\n\n👤 ${displayName}\n🆔 Chat ID: ${chatId}${caption ? `\n💬 ${caption}` : ''}`,
+          parse_mode: 'HTML'
+        })
+      })
 
       await sendMessage(chatId,
-        `✅ Chekingiz qabul qilindi!\n\nBiz tez orada buyurtmangizni tasdiqlaymiz. Rahmat! 🙏`
+        `✅ Chekingiz qabul qilindi!\n\nTez orada buyurtmangizni jo'natamiz. Rahmat! 🙏`
       )
       return res.status(200).end()
     }
@@ -73,7 +151,7 @@ export default async function handler(req, res) {
     // Other text
     if (msg.text) {
       await sendMessage(chatId,
-        `Buyurtma to'lovidan so'ng chek screenshotini shu botga yuboring 📸\n\n` +
+        `Buyurtma bergandan so'ng chek screenshotini shu botga yuboring 📸\n\n` +
         `🛍 <a href="https://tokyo-brands-uz.vercel.app">tokyo-brands-uz.vercel.app</a>`
       )
     }
