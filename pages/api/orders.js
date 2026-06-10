@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   }
 
   const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
-  const CHAT_ID = process.env.TELEGRAM_CHAT_ID
+  const OWNER_CHAT_ID = process.env.TELEGRAM_CHAT_ID
 
   const itemsList = items.map((i, idx) =>
     `  ${idx + 1}. ${i.name}${i.color ? ` (${i.color})` : ''}${i.size ? ` / ${i.size}` : ''} x ${i.qty} = ${(i.price * i.qty).toLocaleString('uz-UZ')} so'm`
@@ -23,8 +23,10 @@ export default async function handler(req, res) {
     : "Ko'rsatilmagan"
 
   const totalItems = items.reduce((s, i) => s + i.qty, 0)
+  const totalFormatted = Number(total).toLocaleString('uz-UZ')
 
-  const message = `🛍 <b>YANGI BUYURTMA!</b>
+  // 1. Notify OWNER
+  const ownerMessage = `🛍 <b>YANGI BUYURTMA!</b>
 
 👤 <b>Mijoz:</b> ${customer_name || "Noma'lum"}
 📞 <b>Telefon:</b> ${phone}
@@ -34,29 +36,70 @@ export default async function handler(req, res) {
 🧾 <b>Buyurtma (${totalItems} ta mahsulot):</b>
 ${itemsList}
 
-💰 <b>Jami: ${Number(total).toLocaleString('uz-UZ')} so'm</b>
+💰 <b>Jami: ${totalFormatted} so'm</b>
+💳 <b>To'lov:</b> Karta orqali o'tkazma
+   ⏳ Chek kutilmoqda...
 
 ⏰ ${new Date().toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent' })}`
 
   try {
-    const tgRes = await fetch(
+    // Send to owner
+    const ownerRes = await fetch(
       `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          chat_id: CHAT_ID,
-          text: message,
+          chat_id: OWNER_CHAT_ID,
+          text: ownerMessage,
           parse_mode: 'HTML',
           disable_web_page_preview: true,
         }),
       }
     )
-    const tgData = await tgRes.json()
-    if (!tgData.ok) {
-      console.error('Telegram error:', tgData)
-      return res.status(500).json({ error: 'Telegram send failed' })
+    const ownerData = await ownerRes.json()
+    if (!ownerData.ok) {
+      console.error('Owner Telegram error:', ownerData)
     }
+
+    // 2. Send confirmation to CUSTOMER (if telegram username provided)
+    if (telegram) {
+      // Get customer chat_id by username - only works if they started the bot
+      const customerUsername = telegram.startsWith('@') ? telegram.slice(1) : telegram
+
+      const customerMessage = `✅ <b>Buyurtmangiz qabul qilindi!</b>
+
+🧾 <b>Buyurtma:</b>
+${itemsList}
+
+💰 <b>Jami: ${totalFormatted} so'm</b>
+
+💳 <b>To'lov:</b>
+Karta raqami: <code>9860 1606 0740 1702</code>
+Karta egasi: Jalolova M
+
+📸 <b>To'lovdan keyin chek screenshotini shu botga yuboring!</b>
+Biz tasdiqlashni kutamiz 🙏
+
+🛍 <a href="https://tokyo-brands-uz.vercel.app">TOKYO Brands</a>`
+
+      // Try to send to customer via username
+      // Note: this only works if customer has started the bot
+      await fetch(
+        `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: `@${customerUsername}`,
+            text: customerMessage,
+            parse_mode: 'HTML',
+            disable_web_page_preview: true,
+          }),
+        }
+      )
+    }
+
     return res.status(200).json({ success: true })
   } catch (err) {
     console.error('Order API error:', err)
