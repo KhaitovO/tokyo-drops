@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   const OWNER_CHAT_ID = process.env.TELEGRAM_CHAT_ID
 
   const itemsList = items.map((i, idx) =>
-    `  ${idx + 1}. ${i.name}${i.color ? ` (${i.color})` : ''}${i.size ? ` / ${i.size}` : ''} x ${i.qty} = ${(i.price * i.qty).toLocaleString('uz-UZ')} so'm`
+    `  ${idx + 1}. ${i.name}${i.color ? ` (${i.color})` : ''}${i.size ? ` / ${i.size}` : ''} × ${i.qty} = ${(i.price * i.qty).toLocaleString('uz-UZ')} so'm`
   ).join('\n')
 
   const totalItems = items.reduce((s, i) => s + i.qty, 0)
@@ -35,43 +35,53 @@ export default async function handler(req, res) {
     const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML', disable_web_page_preview: true, ...extra })
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+        ...extra
+      })
     })
     return r.json()
   }
 
   try {
-    // 1. Notify OWNER (pending confirmation)
+    // 1. Egasiga xabar
     await sendMessage(OWNER_CHAT_ID,
-      `🛍 <b>YANGI BUYURTMA!</b> — ⏳ Tasdiqlash kutilmoqda\n\n` +
-      `👤 <b>Mijoz:</b> ${customer_name || "Noma'lum"}\n` +
-      `📞 <b>Telefon:</b> ${phone}\n` +
-      `💬 <b>Telegram:</b> ${telegramDisplay}\n` +
-      `📍 <b>Manzil:</b> ${address || "Ko'rsatilmagan"}\n\n` +
-      `🧾 <b>Buyurtma (${totalItems} ta):</b>\n${itemsList}\n\n` +
-      `💰 <b>Jami: ${totalFormatted} so'm</b>\n` +
-      `💳 Karta orqali · ⏳ Chek kutilmoqda\n\n` +
+      `🛍 <b>YANGI BUYURTMA</b>\n` +
+      `━━━━━━━━━━━━━━━\n` +
+      `👤 ${customer_name || "Noma'lum"}\n` +
+      `📞 ${phone}\n` +
+      `💬 ${telegramDisplay}\n` +
+      `📍 ${address || "—"}\n` +
+      `━━━━━━━━━━━━━━━\n` +
+      `${itemsList}\n` +
+      `━━━━━━━━━━━━━━━\n` +
+      `💰 Jami: <b>${totalFormatted} so'm</b>\n` +
+      `💳 Karta orqali · ⏳ Tasdiqlash kutilmoqda\n` +
       `⏰ ${new Date().toLocaleString('uz-UZ', { timeZone: 'Asia/Tashkent' })}`
     )
 
-    // 2. Send confirmation request to CUSTOMER with inline buttons
+    // 2. Mijozga tasdiqlash xabari
     if (telegram) {
-      const username = telegram.startsWith('@') ? telegram.slice(1) : telegram
+      const rawUsername = telegram.startsWith('@') ? telegram.slice(1) : telegram
+
+      // Case-insensitive search
       const { data: user } = await supabase
         .from('telegram_users')
         .select('id')
-        .eq('username', username)
+        .ilike('username', rawUsername)
         .single()
 
       if (user?.id) {
         await sendMessage(user.id,
-          `🛍 <b>Buyurtmangizni tasdiqlang!</b>\n\n` +
-          `🧾 <b>Buyurtma:</b>\n${itemsList}\n\n` +
-          `💰 <b>Jami: ${totalFormatted} so'm</b>\n\n` +
-          `💳 <b>To'lov:</b>\n` +
-          `Karta: <code>9860 1606 0740 1702</code>\n` +
-          `Egasi: Jalolova M\n\n` +
-          `Buyurtmangiz to'g'rimi? Tasdiqlang 👇`,
+          `🛍 <b>Buyurtmangiz qabul qilindi!</b>\n` +
+          `━━━━━━━━━━━━━━━\n` +
+          `${itemsList}\n` +
+          `━━━━━━━━━━━━━━━\n` +
+          `💰 Jami: <b>${totalFormatted} so'm</b>\n\n` +
+          `Buyurtmangiz to'g'rimi? 👇`,
           {
             reply_markup: {
               inline_keyboard: [[
@@ -80,6 +90,12 @@ export default async function handler(req, res) {
               ]]
             }
           }
+        )
+      } else {
+        // User not found - send note to owner
+        await sendMessage(OWNER_CHAT_ID,
+          `⚠️ <b>Diqqat:</b> ${telegramDisplay} hali botga ulanmagan.\n` +
+          `Mijoz bilan qo'lda bog'laning.`
         )
       }
     }
