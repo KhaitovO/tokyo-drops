@@ -10,7 +10,7 @@ const CATEGORIES = {
   "Kosmetika": ["Yuz uchun", "Qo'l uchun", "Oyoq uchun", "Quyoshdan himoya", "Maska"],
 }
 const MAIN_CATS = Object.keys(CATEGORIES)
-const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
+const fmt = n => n ? `$${Number(n).toLocaleString('en-US')}` : ''
 
 export default function Home() {
   const [products, setProducts] = useState([])
@@ -45,6 +45,7 @@ export default function Home() {
   const detail = products.find(p => p.id === detailId)
   const cartCount = cart.reduce((s, i) => s + i.qty, 0)
   const cartTotal = cart.reduce((s, i) => s + i.price * i.qty, 0)
+  const fmtPrice = n => n ? `$${Number(n).toLocaleString('en-US')}` : ''
 
   const filtered = products.filter(p => {
     if (specialFilter === 'new') return p.is_new
@@ -705,7 +706,7 @@ function MobileNav({ open, onClose, onSelectCat, onHome, onNews, activeCat, acti
 
 
 function DetailModal({ detail, onClose, onAdd }) {
-  const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
+  const fmt = n => n ? `$${Number(n).toLocaleString('en-US')}` : ''
   const colors = detail.colors || []
   const hasColors = colors.length > 0
 
@@ -892,7 +893,11 @@ function DetailModal({ detail, onClose, onAdd }) {
           {detail.sizes?.length>0 && !selectedSize && (
             <p style={{fontSize:'12px',color:'#c0392b',marginBottom:'10px'}}>⚠ Iltimos, o'lchamni tanlang</p>
           )}
-          {detail.description && <div className="modal-desc">{detail.description}</div>}
+          {detail.description && (
+            <div className="modal-desc" style={{whiteSpace:'pre-line',lineHeight:'1.7'}}>
+              {detail.description}
+            </div>
+          )}
           {(detail.volume || detail.duration) && (
             <div style={{display:'flex',gap:'12px',marginBottom:'16px',flexWrap:'wrap'}}>
               {detail.volume && (
@@ -956,7 +961,7 @@ function DetailModal({ detail, onClose, onAdd }) {
 }
 
 function ProductCard({ p, onAdd, onDetail }) {
-  const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
+  const fmt = n => n ? `$${Number(n).toLocaleString('en-US')}` : ''
   const colors = p.colors || []
 
   // All images from all colors combined for card swipe

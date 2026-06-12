@@ -13,7 +13,7 @@ const CATEGORIES = {
 const MAIN_CATS = Object.keys(CATEGORIES)
 const SIZES_ALL = ["XS","S","M","L","XL","XXL","36","37","38","39","40","41","42","43","44"]
 const KIDS_SIZES = ["80cm","90cm","100cm","110cm","120cm","130cm","140cm","150cm","160cm","XS(kids)","S(kids)","M(kids)","L(kids)"]
-const fmt = n => n?.toLocaleString('uz-UZ') + " so'm"
+const fmt = n => n ? `$${Number(n).toLocaleString('en-US')}` : '—'
 const CLOUD_NAME = "dxt6bj2cx"
 const UPLOAD_PRESET = "tokyo-drops"
 
@@ -38,13 +38,10 @@ const EMPTY_FORM = {
 }
 
 export default function Admin() {
-  // AUTH HOOKS - must be first
   const [authed, setAuthed] = useState(false)
   const [pwInput, setPwInput] = useState('')
   const [pwError, setPwError] = useState(false)
   const [pwLoading, setPwLoading] = useState(false)
-
-  // ALL OTHER HOOKS - must be before any conditional return
   const [products, setProducts] = useState([])
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -59,23 +56,15 @@ export default function Admin() {
   const [newColorName, setNewColorName] = useState('')
   const [newColorHex, setNewColorHex] = useState('#1a1a1a')
   const [urlInputs, setUrlInputs] = useState({})
-  const fileInputRef = useRef()
 
-  // Check session on load
   useEffect(() => {
     try {
-      if (sessionStorage.getItem('admin_authed') === 'yes') {
-        setAuthed(true)
-      }
+      if (sessionStorage.getItem('admin_authed') === 'yes') setAuthed(true)
     } catch(e) {}
   }, [])
 
-  // Fetch data only when authed
   useEffect(() => {
-    if (authed) {
-      fetchProducts()
-      fetchOrders()
-    }
+    if (authed) { fetchProducts(); fetchOrders() }
   }, [authed])
 
   async function fetchProducts() {
@@ -108,48 +97,30 @@ export default function Admin() {
         setPwError(true)
         setPwInput('')
       }
-    } catch(e) {
-      setPwError(true)
-    }
+    } catch(e) { setPwError(true) }
     setPwLoading(false)
   }
 
   function notify(msg) { setNotif(msg); setTimeout(() => setNotif(null), 2500) }
   function upd(k, v) { setForm(f => ({ ...f, [k]: v })) }
   function toggleSz(s) { setForm(f => ({ ...f, sizes: f.sizes.includes(s) ? f.sizes.filter(x => x !== s) : [...f.sizes, s] })) }
-
-  function handleMainCatChange(val) {
-    setForm(f => ({ ...f, main_cat: val, sub_cat: CATEGORIES[val]?.[0] || '' }))
-  }
+  function handleMainCatChange(val) { setForm(f => ({ ...f, main_cat: val, sub_cat: CATEGORIES[val]?.[0] || '' })) }
 
   function openAdd() {
     setForm({ ...EMPTY_FORM, sub_cat: CATEGORIES["Ayollar"][0] })
-    setEditId(null)
-    setActiveColorIdx(0)
-    setUrlInputs({})
-    setFormOpen(true)
+    setEditId(null); setActiveColorIdx(0); setUrlInputs({}); setFormOpen(true)
   }
 
   function openEdit(p) {
     setForm({
-      name: p.name || '',
-      main_cat: p.main_cat || 'Ayollar',
-      sub_cat: p.sub_cat || '',
-      price: String(p.price || ''),
-      old: p.old_price ? String(p.old_price) : '',
-      sizes: p.sizes || [],
-      stock: String(p.stock || ''),
-      is_new: p.is_new || false,
-      is_sale: p.is_sale || false,
-      description: p.description || '',
-      volume: p.volume || '',
-      duration: p.duration || '',
+      name: p.name || '', main_cat: p.main_cat || 'Ayollar', sub_cat: p.sub_cat || '',
+      price: String(p.price || ''), old: p.old_price ? String(p.old_price) : '',
+      sizes: p.sizes || [], stock: String(p.stock || ''),
+      is_new: p.is_new || false, is_sale: p.is_sale || false,
+      description: p.description || '', volume: p.volume || '', duration: p.duration || '',
       colors: p.colors || [],
     })
-    setEditId(p.id)
-    setActiveColorIdx(0)
-    setUrlInputs({})
-    setFormOpen(true)
+    setEditId(p.id); setActiveColorIdx(0); setUrlInputs({}); setFormOpen(true)
   }
 
   function addColor() {
@@ -158,8 +129,7 @@ export default function Admin() {
     const newColors = [...form.colors, { name: newColorName.trim(), hex: newColorHex, images: [] }]
     setForm(f => ({ ...f, colors: newColors }))
     setActiveColorIdx(newColors.length - 1)
-    setNewColorName('')
-    setNewColorHex('#1a1a1a')
+    setNewColorName(''); setNewColorHex('#1a1a1a')
     notify("Rang qo'shildi")
   }
 
@@ -169,10 +139,7 @@ export default function Admin() {
   }
 
   function updateColorImages(colorIdx, newImages) {
-    setForm(f => ({
-      ...f,
-      colors: f.colors.map((c, i) => i === colorIdx ? { ...c, images: newImages } : c)
-    }))
+    setForm(f => ({ ...f, colors: f.colors.map((c, i) => i === colorIdx ? { ...c, images: newImages } : c) }))
   }
 
   async function uploadColorImages(colorIdx, files) {
@@ -218,22 +185,14 @@ export default function Admin() {
     if (!form.name.trim() || !form.price) { notify("Nom va narx majburiy!"); return }
     const firstImg = form.colors?.[0]?.images?.[0] || ''
     const obj = {
-      name: form.name,
-      main_cat: form.main_cat,
-      sub_cat: form.sub_cat || '',
-      cat: form.main_cat,
-      price: +form.price,
+      name: form.name, main_cat: form.main_cat, sub_cat: form.sub_cat || '',
+      cat: form.main_cat, price: +form.price,
       old_price: form.old ? +form.old : null,
-      img: firstImg,
-      images: form.colors?.[0]?.images || [],
-      colors: form.colors,
-      sizes: form.sizes,
-      stock: +form.stock || 0,
-      is_new: form.is_new,
-      is_sale: form.is_sale,
+      img: firstImg, images: form.colors?.[0]?.images || [],
+      colors: form.colors, sizes: form.sizes, stock: +form.stock || 0,
+      is_new: form.is_new, is_sale: form.is_sale,
       description: form.description || '',
-      volume: form.volume || '',
-      duration: form.duration || '',
+      volume: form.volume || '', duration: form.duration || '',
     }
     let error
     if (editId) {
@@ -243,11 +202,8 @@ export default function Admin() {
       const res = await supabase.from('products').insert([obj])
       error = res.error
     }
-    if (!error) {
-      fetchProducts()
-      setFormOpen(false)
-      notify(editId ? "Yangilandi" : "Qo'shildi")
-    } else notify("Xato: " + error.message)
+    if (!error) { fetchProducts(); setFormOpen(false); notify(editId ? "Yangilandi" : "Qo'shildi") }
+    else notify("Xato: " + error.message)
   }
 
   async function updateOrderStatus(id, status) {
@@ -255,9 +211,15 @@ export default function Admin() {
     fetchOrders()
   }
 
+  async function deleteOrder(id) {
+    if (!window.confirm("Bu buyurtmani o'chirilsinmi?")) return
+    const { error } = await supabase.from('orders').delete().eq('id', id)
+    if (!error) { fetchOrders(); notify("Buyurtma o'chirildi") }
+    else notify("Xato: " + error.message)
+  }
+
   const filteredProducts = filterCat === 'Barchasi' ? products : products.filter(p => p.main_cat === filterCat)
   const activeColor = form.colors[activeColorIdx]
-
   const stats = [
     { l: "Jami mahsulot", v: products.length, c: '#111' },
     { l: "Aksiyada", v: products.filter(p => p.is_sale).length, c: '#c0392b' },
@@ -267,7 +229,6 @@ export default function Admin() {
   const statusLabel = { new: 'Yangi', processing: 'Jarayonda', delivered: 'Yetkazildi', cancelled: 'Bekor' }
   const statusColor = { new: '#2471a3', processing: '#b7950b', delivered: '#1a7a4a', cancelled: '#c0392b' }
 
-  // LOGIN SCREEN - after all hooks
   if (!authed) {
     return (
       <>
@@ -277,52 +238,17 @@ export default function Admin() {
             <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:'26px',fontWeight:400,marginBottom:'6px',textAlign:'center'}}>
               TOKYO <em>Brands</em>
             </div>
-            <p style={{fontSize:'12px',color:'#aaa',textAlign:'center',marginBottom:'32px',letterSpacing:'.06em',textTransform:'uppercase'}}>
-              Admin panel
-            </p>
+            <p style={{fontSize:'12px',color:'#aaa',textAlign:'center',marginBottom:'32px',letterSpacing:'.06em',textTransform:'uppercase'}}>Admin panel</p>
             <form onSubmit={handleLogin}>
               <div style={{marginBottom:'16px'}}>
-                <label style={{display:'block',fontSize:'10px',letterSpacing:'.08em',color:'#888',textTransform:'uppercase',marginBottom:'8px'}}>
-                  Parol
-                </label>
-                <input
-                  type="password"
-                  value={pwInput}
-                  onChange={e => setPwInput(e.target.value)}
-                  placeholder="••••••••"
-                  autoFocus
-                  style={{
-                    width:'100%',
-                    border: pwError ? '1px solid #c0392b' : '1px solid #e4e2dd',
-                    padding:'11px 13px',
-                    fontSize:'15px',
-                    background:'#fafaf8',
-                    outline:'none',
-                    boxSizing:'border-box',
-                  }}
-                />
-                {pwError && (
-                  <p style={{fontSize:'12px',color:'#c0392b',marginTop:'6px'}}>
-                    Parol noto&apos;g&apos;ri. Qayta urinib ko&apos;ring.
-                  </p>
-                )}
+                <label style={{display:'block',fontSize:'10px',letterSpacing:'.08em',color:'#888',textTransform:'uppercase',marginBottom:'8px'}}>Parol</label>
+                <input type="password" value={pwInput} onChange={e=>setPwInput(e.target.value)}
+                  placeholder="••••••••" autoFocus
+                  style={{width:'100%',border:pwError?'1px solid #c0392b':'1px solid #e4e2dd',padding:'11px 13px',fontSize:'15px',background:'#fafaf8',outline:'none',boxSizing:'border-box'}}/>
+                {pwError && <p style={{fontSize:'12px',color:'#c0392b',marginTop:'6px'}}>Parol noto&apos;g&apos;ri.</p>}
               </div>
-              <button
-                type="submit"
-                disabled={pwLoading || !pwInput}
-                style={{
-                  width:'100%',
-                  background: pwLoading || !pwInput ? '#ccc' : '#111',
-                  color:'#fff',
-                  border:'none',
-                  padding:'13px',
-                  fontSize:'12px',
-                  fontWeight:600,
-                  letterSpacing:'.1em',
-                  textTransform:'uppercase',
-                  cursor: pwLoading || !pwInput ? 'not-allowed' : 'pointer',
-                }}
-              >
+              <button type="submit" disabled={pwLoading||!pwInput}
+                style={{width:'100%',background:pwLoading||!pwInput?'#ccc':'#111',color:'#fff',border:'none',padding:'13px',fontSize:'12px',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase',cursor:pwLoading||!pwInput?'not-allowed':'pointer'}}>
                 {pwLoading ? 'Tekshirilmoqda...' : 'KIRISH'}
               </button>
             </form>
@@ -332,7 +258,6 @@ export default function Admin() {
     )
   }
 
-  // ADMIN PANEL - only shown when authed
   return (
     <>
       <Head><title>Admin — TOKYO Brands</title></Head>
@@ -379,9 +304,7 @@ export default function Admin() {
                 </button>
               ))}
             </div>
-            {loading ? (
-              <p style={{textAlign:'center',padding:'40px',color:'#999'}}>Yuklanmoqda...</p>
-            ) : (
+            {loading ? <p style={{textAlign:'center',padding:'40px',color:'#999'}}>Yuklanmoqda...</p> : (
               <div className="table-wrap">
                 <div className="table-head">
                   <span className="th"></span>
@@ -392,9 +315,7 @@ export default function Admin() {
                   <span className="th">Status</span>
                   <span className="th">Amallar</span>
                 </div>
-                {filteredProducts.length === 0 && (
-                  <div style={{padding:'40px',textAlign:'center',color:'#999'}}>Mahsulot yo&apos;q</div>
-                )}
+                {filteredProducts.length === 0 && <div style={{padding:'40px',textAlign:'center',color:'#999'}}>Mahsulot yo&apos;q</div>}
                 {filteredProducts.map(p => (
                   <div key={p.id} className="table-row">
                     <img src={p.img||'https://images.unsplash.com/photo-1523381294911-8d3cead13475?w=80'} style={{width:40,height:50,objectFit:'cover'}} alt=""/>
@@ -402,9 +323,7 @@ export default function Admin() {
                       <div className="td" style={{fontWeight:500}}>{p.name}</div>
                       {p.colors?.length > 0 && (
                         <div style={{display:'flex',gap:'3px',marginTop:'4px'}}>
-                          {p.colors.map((c,i) => (
-                            <div key={i} title={c.name} style={{width:12,height:12,borderRadius:'50%',background:c.hex,border:'1px solid #ddd'}}/>
-                          ))}
+                          {p.colors.map((c,i) => <div key={i} title={c.name} style={{width:12,height:12,borderRadius:'50%',background:c.hex,border:'1px solid #ddd'}}/>)}
                         </div>
                       )}
                     </div>
@@ -434,22 +353,30 @@ export default function Admin() {
 
         {tab === 'orders' && (
           <div className="table-wrap">
-            <div style={{display:'grid',gridTemplateColumns:'1fr 130px 150px 130px 110px',padding:'10px 16px',background:'#f7f7f5',borderBottom:'1px solid #e4e2dd'}}>
-              {['Mijoz','Telefon','Jami','Status','Sana'].map(h=><span key={h} className="th">{h}</span>)}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 130px 100px 150px 100px',padding:'10px 16px',background:'#f7f7f5',borderBottom:'1px solid #e4e2dd'}}>
+              {['Mijoz','Telefon','Jami','Status','Sana'].map(h => <span key={h} className="th">{h}</span>)}
             </div>
             {orders.length === 0 && <div style={{padding:'40px',textAlign:'center',color:'#999'}}>Buyurtma yo&apos;q</div>}
             {orders.map(o => (
-              <div key={o.id} style={{display:'grid',gridTemplateColumns:'1fr 130px 150px 130px 110px',padding:'12px 16px',borderBottom:'1px solid #f5f5f5',alignItems:'center'}}>
+              <div key={o.id} style={{display:'grid',gridTemplateColumns:'1fr 130px 100px 150px 100px',padding:'12px 16px',borderBottom:'1px solid #f5f5f5',alignItems:'center'}}>
                 <div>
                   <div style={{fontSize:'13px',fontWeight:500}}>{o.customer_name||"Noma'lum"}</div>
                   <div style={{fontSize:'11px',color:'#aaa'}}>{o.address}</div>
                 </div>
                 <div style={{fontSize:'13px'}}>{o.phone}</div>
                 <div style={{fontSize:'13px',fontWeight:600}}>{fmt(o.total)}</div>
-                <select value={o.status} onChange={e=>updateOrderStatus(o.id,e.target.value)}
-                  style={{fontSize:'11px',border:'1px solid #ddd',padding:'4px 8px',background:'#fff',color:statusColor[o.status]||'#111',fontWeight:600}}>
-                  {Object.entries(statusLabel).map(([v,l])=><option key={v} value={v}>{l}</option>)}
-                </select>
+                <div style={{display:'flex',flexDirection:'column',gap:'4px'}}>
+                  <select value={o.status} onChange={e=>updateOrderStatus(o.id,e.target.value)}
+                    style={{fontSize:'11px',border:'1px solid #ddd',padding:'4px 8px',background:'#fff',color:statusColor[o.status]||'#111',fontWeight:600}}>
+                    {Object.entries(statusLabel).map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                  {(o.status==='cancelled'||o.status==='delivered') && (
+                    <button onClick={()=>deleteOrder(o.id)}
+                      style={{fontSize:'10px',color:'#c0392b',background:'none',border:'1px solid #c0392b',padding:'2px 6px',cursor:'pointer'}}>
+                      🗑 O&apos;chir
+                    </button>
+                  )}
+                </div>
                 <div style={{fontSize:'11px',color:'#aaa'}}>{new Date(o.created_at).toLocaleDateString('uz-UZ')}</div>
               </div>
             ))}
@@ -466,13 +393,13 @@ export default function Admin() {
               <div className="field" style={{marginBottom:0}}>
                 <label>Asosiy kategoriya</label>
                 <select value={form.main_cat} onChange={e=>handleMainCatChange(e.target.value)}>
-                  {MAIN_CATS.map(c=><option key={c}>{c}</option>)}
+                  {MAIN_CATS.map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
               <div className="field" style={{marginBottom:0}}>
                 <label>Kichik kategoriya</label>
                 <select value={form.sub_cat} onChange={e=>upd('sub_cat',e.target.value)} disabled={!CATEGORIES[form.main_cat]?.length}>
-                  {(CATEGORIES[form.main_cat]||[]).map(c=><option key={c}>{c}</option>)}
+                  {(CATEGORIES[form.main_cat]||[]).map(c => <option key={c}>{c}</option>)}
                   {!CATEGORIES[form.main_cat]?.length && <option value="">—</option>}
                 </select>
               </div>
@@ -480,16 +407,25 @@ export default function Admin() {
 
             {[
               {l:"Nomi *", k:"name", t:"text", ph:"Masalan: Uniqlo T-shirt"},
-              {l:"Narx (so'm) *", k:"price", t:"number", ph:"185000"},
-              {l:"Eski narx (so'm)", k:"old", t:"number", ph:"Bo'lmasa bo'sh"},
+              {l:"Narx ($) *", k:"price", t:"number", ph:"Masalan: 25"},
+              {l:"Eski narx ($)", k:"old", t:"number", ph:"Bo'lmasa bo'sh"},
               {l:"Zaxira (dona)", k:"stock", t:"number", ph:"10"},
-              {l:"Tavsif", k:"description", t:"text", ph:"Mahsulot haqida"},
             ].map(({l,k,t,ph}) => (
               <div key={k} className="field">
                 <label>{l}</label>
                 <input type={t} value={form[k]||''} placeholder={ph} onChange={e=>upd(k,e.target.value)}/>
               </div>
             ))}
+
+            <div className="field">
+              <label>Tavsif</label>
+              <textarea value={form.description||''}
+                placeholder={"Mahsulot haqida yozing...\nHar bir qatorni Enter bilan ajrating"}
+                onChange={e=>upd('description',e.target.value)}
+                rows={5}
+                style={{width:'100%',border:'1px solid #e4e2dd',padding:'10px 12px',fontSize:'13px',background:'#fafaf8',resize:'vertical',fontFamily:'inherit',lineHeight:'1.6',boxSizing:'border-box'}}/>
+              <p style={{fontSize:'10px',color:'#aaa',marginTop:'4px'}}>Enter bosib yangi qator qo&apos;shing</p>
+            </div>
 
             {form.main_cat === 'Kosmetika' && (
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px',marginBottom:'16px'}}>
@@ -506,9 +442,9 @@ export default function Admin() {
 
             {form.main_cat !== 'Kosmetika' && (
               <div className="field">
-                <label>O'lchamlar</label>
+                <label>O&apos;lchamlar</label>
                 <div className="sizes-picker">
-                  {(form.main_cat==='Bolalar'||form.main_cat==='Baby' ? KIDS_SIZES : SIZES_ALL).map(s=>(
+                  {(form.main_cat==='Bolalar'||form.main_cat==='Baby' ? KIDS_SIZES : SIZES_ALL).map(s => (
                     <button key={s} type="button" className={`sp${form.sizes.includes(s)?' active':''}`} onClick={()=>toggleSz(s)}>{s}</button>
                   ))}
                 </div>
@@ -517,7 +453,6 @@ export default function Admin() {
 
             <div className="field">
               <label>Ranglar va rasmlar</label>
-
               {form.colors.length > 0 && (
                 <div style={{display:'flex',gap:'6px',marginBottom:'12px',flexWrap:'wrap'}}>
                   {form.colors.map((c, i) => (
@@ -544,23 +479,22 @@ export default function Admin() {
                       {activeColor.images.map((img, i) => (
                         <div key={i} style={{position:'relative',width:56,height:70,flexShrink:0}}>
                           <img src={img} style={{width:'100%',height:'100%',objectFit:'cover',borderRadius:'1px'}} alt=""/>
-                          <button type="button" onClick={()=>removeColorImage(activeColorIdx, i)}
+                          <button type="button" onClick={()=>removeColorImage(activeColorIdx,i)}
                             style={{position:'absolute',top:-5,right:-5,background:'#c0392b',color:'#fff',border:'none',width:16,height:16,borderRadius:'50%',fontSize:'10px',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',lineHeight:1}}>×</button>
                         </div>
                       ))}
                     </div>
                   )}
                   <input type="file" multiple accept="image/*" id={`fu-${activeColorIdx}`} style={{display:'none'}}
-                    onChange={e=>uploadColorImages(activeColorIdx, Array.from(e.target.files))}/>
+                    onChange={e=>uploadColorImages(activeColorIdx,Array.from(e.target.files))}/>
                   <label htmlFor={`fu-${activeColorIdx}`}
                     style={{display:'inline-block',border:'1px dashed #ccc',padding:'7px 14px',fontSize:'12px',cursor:'pointer',color:'#555',marginBottom:'8px',borderRadius:'2px'}}>
                     {uploading ? 'Yuklanmoqda...' : '📸 Rasm yuklash'}
                   </label>
                   <div style={{display:'flex',gap:'6px'}}>
-                    <input type="text"
-                      value={urlInputs[activeColorIdx]||''}
+                    <input type="text" value={urlInputs[activeColorIdx]||''}
                       onChange={e=>setUrlInputs(u=>({...u,[activeColorIdx]:e.target.value}))}
-                      onKeyDown={e=>{if(e.key==='Enter'){addUrlToColor(activeColorIdx)}}}
+                      onKeyDown={e=>{if(e.key==='Enter')addUrlToColor(activeColorIdx)}}
                       placeholder="URL: https://..."
                       style={{flex:1,border:'1px solid #e4e2dd',padding:'7px 10px',fontSize:'12px',background:'#fff'}}/>
                     <button type="button" onClick={()=>addUrlToColor(activeColorIdx)}
@@ -573,24 +507,20 @@ export default function Admin() {
                 <p style={{fontSize:'11px',color:'#888',letterSpacing:'.05em',textTransform:'uppercase',marginBottom:'10px'}}>Yangi rang qo&apos;shish</p>
                 <div style={{display:'flex',gap:'5px',flexWrap:'wrap',marginBottom:'12px'}}>
                   {PRESET_COLORS.map((c,i) => (
-                    <div key={i} title={c.name}
-                      onClick={()=>{setNewColorName(c.name);setNewColorHex(c.hex)}}
+                    <div key={i} title={c.name} onClick={()=>{setNewColorName(c.name);setNewColorHex(c.hex)}}
                       style={{width:22,height:22,borderRadius:'50%',background:c.hex,border:newColorHex===c.hex?'2.5px solid #111':'1.5px solid #ddd',cursor:'pointer',flexShrink:0,transition:'transform .15s'}}
                       onMouseEnter={e=>e.currentTarget.style.transform='scale(1.2)'}
                       onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}/>
                   ))}
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 40px 100px auto',gap:'8px',alignItems:'center'}}>
-                  <input type="text" value={newColorName}
-                    onChange={e=>setNewColorName(e.target.value)}
+                  <input type="text" value={newColorName} onChange={e=>setNewColorName(e.target.value)}
                     onKeyDown={e=>{if(e.key==='Enter')addColor()}}
                     placeholder="Rang nomi..."
                     style={{border:'1px solid #e4e2dd',padding:'8px 10px',fontSize:'12px'}}/>
-                  <input type="color" value={newColorHex}
-                    onChange={e=>setNewColorHex(e.target.value)}
+                  <input type="color" value={newColorHex} onChange={e=>setNewColorHex(e.target.value)}
                     style={{width:'40px',height:'34px',border:'1px solid #e4e2dd',cursor:'pointer',padding:'2px'}}/>
-                  <input type="text" value={newColorHex}
-                    onChange={e=>setNewColorHex(e.target.value)}
+                  <input type="text" value={newColorHex} onChange={e=>setNewColorHex(e.target.value)}
                     placeholder="#000000"
                     style={{border:'1px solid #e4e2dd',padding:'8px 10px',fontSize:'12px',fontFamily:'monospace'}}/>
                   <button type="button" onClick={addColor}
