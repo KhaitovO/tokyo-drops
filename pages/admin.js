@@ -69,7 +69,7 @@ export default function Admin() {
 
   async function fetchProducts() {
     setLoading(true)
-    const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase.from('products').select('*').order('sort_order', { ascending: false, nullsFirst: false })
     setProducts(data || [])
     setLoading(false)
   }
@@ -199,7 +199,9 @@ export default function Admin() {
       const res = await supabase.from('products').update(obj).eq('id', editId)
       error = res.error
     } else {
-      const res = await supabase.from('products').insert([obj])
+      // New product gets highest sort_order so it appears at top
+      const maxSort = products.reduce((max, p) => Math.max(max, p.sort_order || 0), 0)
+      const res = await supabase.from('products').insert([{ ...obj, sort_order: maxSort + 1 }])
       error = res.error
     }
     if (!error) { fetchProducts(); setFormOpen(false); notify(editId ? "Yangilandi" : "Qo'shildi") }
@@ -216,6 +218,40 @@ export default function Admin() {
     const { error } = await supabase.from('orders').delete().eq('id', id)
     if (!error) { fetchOrders(); notify("Buyurtma o'chirildi") }
     else notify("Xato: " + error.message)
+  }
+
+  // ── DRAG TO REORDER ──
+  const [dragId, setDragId] = useState(null)
+  const [dragOverId, setDragOverId] = useState(null)
+
+  function handleDragStart(id) { setDragId(id) }
+  function handleDragOver(e, id) { e.preventDefault(); if (id !== dragId) setDragOverId(id) }
+  function handleDragLeave() { setDragOverId(null) }
+
+  async function handleDrop(targetId) {
+    setDragOverId(null)
+    if (!dragId || dragId === targetId) { setDragId(null); return }
+
+    const list = [...products]
+    const fromIdx = list.findIndex(p => p.id === dragId)
+    const toIdx = list.findIndex(p => p.id === targetId)
+    if (fromIdx === -1 || toIdx === -1) { setDragId(null); return }
+
+    const [moved] = list.splice(fromIdx, 1)
+    list.splice(toIdx, 0, moved)
+
+    // Reassign sort_order: highest number = top of list
+    const n = list.length
+    const updates = list.map((p, i) => ({ id: p.id, sort_order: n - i }))
+
+    setProducts(list) // optimistic UI update
+    setDragId(null)
+
+    // Persist to Supabase
+    for (const u of updates) {
+      await supabase.from('products').update({ sort_order: u.sort_order }).eq('id', u.id)
+    }
+    notify("Tartib saqlandi")
   }
 
   const filteredProducts = filterCat === 'Barchasi' ? products : products.filter(p => p.main_cat === filterCat)
@@ -304,9 +340,15 @@ export default function Admin() {
                 </button>
               ))}
             </div>
+            {filterCat === 'Barchasi' && filteredProducts.length > 1 && (
+              <p style={{fontSize:'11px',color:'#999',marginBottom:'10px'}}>
+                ⠿ belgisidan tortib mahsulot tartibini o&apos;zgartiring — bu tartib mijozlar sahifasida ham aks etadi
+              </p>
+            )}
             {loading ? <p style={{textAlign:'center',padding:'40px',color:'#999'}}>Yuklanmoqda...</p> : (
               <div className="table-wrap">
-                <div className="table-head">
+                <div className="table-head" style={{gridTemplateColumns:'24px 56px 1fr 110px 70px 60px 90px 130px'}}>
+                  <span className="th"></span>
                   <span className="th"></span>
                   <span className="th">Mahsulot</span>
                   <span className="th">Kategoriya</span>
@@ -316,8 +358,26 @@ export default function Admin() {
                   <span className="th">Amallar</span>
                 </div>
                 {filteredProducts.length === 0 && <div style={{padding:'40px',textAlign:'center',color:'#999'}}>Mahsulot yo&apos;q</div>}
-                {filteredProducts.map(p => (
-                  <div key={p.id} className="table-row">
+                {filteredProducts.map(p => {
+                  const canDrag = filterCat === 'Barchasi'
+                  return (
+                  <div key={p.id} className="table-row"
+                    draggable={canDrag}
+                    onDragStart={()=>canDrag && handleDragStart(p.id)}
+                    onDragOver={e=>canDrag && handleDragOver(e,p.id)}
+                    onDragLeave={()=>canDrag && handleDragLeave()}
+                    onDrop={()=>canDrag && handleDrop(p.id)}
+                    onDragEnd={()=>{setDragId(null);setDragOverId(null)}}
+                    style={{
+                      gridTemplateColumns:'24px 56px 1fr 110px 70px 60px 90px 130px',
+                      opacity: dragId===p.id ? 0.4 : 1,
+                      borderTop: dragOverId===p.id ? '2px solid #111' : 'none',
+                      cursor: canDrag ? 'grab' : 'default',
+                      transition:'opacity .15s',
+                    }}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'center',color:canDrag?'#bbb':'#eee',fontSize:'16px',userSelect:'none'}}>
+                      {canDrag ? '⠿' : ''}
+                    </div>
                     <img src={p.img||'https://images.unsplash.com/photo-1523381294911-8d3cead13475?w=80'} style={{width:40,height:50,objectFit:'cover'}} alt=""/>
                     <div>
                       <div className="td" style={{fontWeight:500}}>{p.name}</div>
@@ -345,7 +405,7 @@ export default function Admin() {
                       <button className="act-btn act-del" onClick={()=>del(p.id)}>O&apos;chir</button>
                     </div>
                   </div>
-                ))}
+                )})}
               </div>
             )}
           </>

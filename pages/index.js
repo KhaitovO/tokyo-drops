@@ -37,7 +37,7 @@ export default function Home() {
 
   async function fetchProducts() {
     setLoading(true)
-    const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase.from('products').select('*').order('sort_order', { ascending: false, nullsFirst: false })
     setProducts(data || [])
     setLoading(false)
   }
