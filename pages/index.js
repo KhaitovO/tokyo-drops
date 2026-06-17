@@ -308,7 +308,7 @@ export default function Home() {
                   <p style={{fontSize:'10px',letterSpacing:'.18em',color:'#999',textTransform:'uppercase',marginBottom:'14px'}}>Har haftada yangi mahsulotlar</p>
                   <h2 className="cta-title serif">Telegram kanalimizga<br/><em>obuna bo'ling</em></h2>
                   <p className="cta-sub">Yangi kelgan mahsulotlar va chegirmalardan birinchi xabardor bo'ling</p>
-                  <button className="btn-dark">TELEGRAM KANALGA O'TISH</button>
+                  <a href="https://t.me/tokyo_brands" target="_blank" rel="noreferrer" className="btn-dark" style={{display:'inline-block',textDecoration:'none'}}>TELEGRAM KANALGA O'TISH</a>
                 </div>
 
                 {onSale.length > 0 && (
@@ -432,11 +432,14 @@ export default function Home() {
           </div>
           <div className="footer-col">
             <h4>Ma'lumot</h4>
-            <a>Yetkazib berish</a><a>Qaytarish</a><a>Biz haqimizda</a><a>Aloqa</a>
+            <a>Yetkazib berish</a><a>Qaytarish</a><a>Biz haqimizda</a>
+            <a href="https://t.me/tokyobrandsuz_bot" target="_blank" rel="noreferrer">Aloqa (bot)</a>
           </div>
           <div className="footer-col">
             <h4>Ijtimoiy</h4>
-            <a>Telegram</a><a>Instagram</a><a>TikTok</a>
+            <a href="https://t.me/tokyo_brands" target="_blank" rel="noreferrer">Telegram kanal</a>
+            <a href="https://t.me/tokyo_brendsUZ" target="_blank" rel="noreferrer">Mijozlar fikri</a>
+            <a href="https://t.me/tokyobrandsuz_bot" target="_blank" rel="noreferrer">Buyurtma bot</a>
           </div>
         </div>
         <div className="footer-bottom">
